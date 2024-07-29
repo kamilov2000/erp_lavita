@@ -2,6 +2,7 @@ import marshmallow as ma
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 
 from app.user.models import User
+from app.base import session
 
 
 class UserSchema(SQLAlchemyAutoSchema):
@@ -9,6 +10,7 @@ class UserSchema(SQLAlchemyAutoSchema):
         model = User
         include_fk = True
         load_instance = True
+        sqla_session = session
 
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)

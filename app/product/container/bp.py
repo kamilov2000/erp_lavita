@@ -1,11 +1,13 @@
+import os
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
 from app.product.models import Container
-from app.product.schema import ProductQueryArgSchema, ContainerSchema
+from app.product.schema import PhotoSchema, ProductQueryArgSchema, ContainerSchema
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.schema import TokenSchema
+from app.utils.func import hash_image_save, msg_response, token_required
+from app.utils.schema import ResponseSchema, TokenSchema
 
 
 container = Blueprint(
@@ -65,3 +67,26 @@ class ContainerById(MethodView):
             Container.delete(container_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
+
+
+@container.post("/<container_id>/update_photo/")
+@token_required
+@container.arguments(PhotoSchema, location="files")
+@container.arguments(TokenSchema, location="headers")
+@container.response(400, ResponseSchema)
+@container.response(200, ContainerSchema)
+def change_photo(cur_user, photo, token, container_id):
+    print(cur_user)
+    container = Container.get_by_id(container_id)
+    try:
+        path = hash_image_save(photo.get("photo"), "container", container_id)
+    except ItemNotFoundError:
+        return msg_response("Photo not found", False), 400
+    if container.photo is not None and container.photo != path:
+        try:
+            os.remove(container.photo)
+        except FileNotFoundError:
+            pass
+    container.photo = path
+    session.commit()
+    return container
