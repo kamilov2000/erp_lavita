@@ -1,5 +1,6 @@
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 import marshmallow as ma
+from app.base import session
 from app.invoice.models import (
     Invoice,
     InvoiceComment,
@@ -24,6 +25,7 @@ class InvoiceSchema(SQLAlchemyAutoSchema):
         include_fk = True
         load_instance = True
         exclude = ["warehouse_sender_id"]
+        sqla_session = session
 
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
@@ -40,6 +42,7 @@ class ProductionSchema(SQLAlchemyAutoSchema):
         include_fk = True
         load_instance = True
         exclude = ["warehouse_sender_id"]
+        sqla_session = session
 
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
@@ -56,6 +59,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema):
         include_fk = True
         load_instance = True
         exclude = ["warehouse_sender_id"]
+        sqla_session = session
 
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
@@ -88,6 +92,7 @@ class InvoiceCommentSchema(SQLAlchemyAutoSchema):
         model = InvoiceComment
         include_fk = True
         load_instance = True
+        sqla_session = session
 
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
@@ -99,6 +104,7 @@ class InvoiceLogSchema(SQLAlchemyAutoSchema):
         model = InvoiceLog
         include_fk = True
         load_instance = True
+        sqla_session = session
 
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)

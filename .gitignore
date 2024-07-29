@@ -172,3 +172,4 @@ run.build/
 .idea
 
 app/config/main.py
+uploads/

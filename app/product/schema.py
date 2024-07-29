@@ -26,6 +26,7 @@ class ContainerSchema(SQLAlchemyAutoSchema):
         model = Container
         include_fk = True
         load_instance = True
+        sqla_session = session
 
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
@@ -39,6 +40,7 @@ class PartSchema(SQLAlchemyAutoSchema):
         model = Part
         include_fk = True
         load_instance = True
+        sqla_session = session
 
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
@@ -50,3 +52,7 @@ class PartSchema(SQLAlchemyAutoSchema):
 class ProductQueryArgSchema(ma.Schema):
     measurement = ma.fields.Enum(MeasumentTypes, by_value=True, required=False)
     name = ma.fields.Str(required=False)
+
+
+class PhotoSchema(ma.Schema):
+    photo = ma.fields.Raw(type="string", format="binary")

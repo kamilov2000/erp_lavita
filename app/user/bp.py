@@ -39,6 +39,28 @@ def login_user(data):
     return msg_response({"token": token, "role": user.role})
 
 
+@user.post("/register")
+@user.arguments(LoginSchema)
+@user.response(200, LoginResponseSchema)
+@user.response(400, ResponseSchema)
+def register(data):
+    username = data.get("username")
+    user = session.execute(select(User).where(User.username == username)).scalar()
+    if user:
+        return msg_response("Username is already in use", False), 400
+    user = UserSchema().load(data, session=session)
+    session.add(user)
+    session.commit()
+    token = jwt.encode(
+        {
+            "public_id": user.id,
+            "exp": datetime.datetime.now() + datetime.timedelta(days=365),
+        },
+        current_app.config.get("SECRET_KEY"),
+    )
+    return msg_response({"token": token, "role": user.role})
+
+
 @user.route("/<int:id>/")
 class UserByIdView(MethodView):
     @user.arguments(TokenSchema, location="headers")
