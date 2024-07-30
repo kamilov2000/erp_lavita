@@ -9,6 +9,7 @@ from app.base import Base
 if TYPE_CHECKING:
     from app.warehouse.models import Warehouse
     from app.user.models import User
+    from app.product.models import ContainerLot, PartLot, ProductLot
 
 
 class File(Base):
@@ -49,6 +50,11 @@ class Invoice(Base):
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     comments: Mapped[List["InvoiceComment"]] = relationship(back_populates="invoice")
     logs: Mapped[List["InvoiceLog"]] = relationship(back_populates="invoice")
+    product_lots: Mapped[List["ProductLot"]] = relationship(back_populates="invoice")
+    container_lots: Mapped[List["ContainerLot"]] = relationship(
+        back_populates="invoice"
+    )
+    part_lots: Mapped[List["PartLot"]] = relationship(back_populates="invoice")
 
 
 class InvoiceComment(Base):

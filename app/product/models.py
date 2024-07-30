@@ -1,32 +1,14 @@
-from sqlalchemy import JSON, Column, ForeignKey, Enum, Table
+import uuid
+from sqlalchemy import JSON, Float, ForeignKey, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 import enum
 from app.choices import MeasumentTypes
 from app.base import Base
 
-
-product_container = Table(
-    "product_container",
-    Base.metadata,
-    Column("product_id", ForeignKey("product.id"), primary_key=True),
-    Column("container_id", ForeignKey("container.id"), primary_key=True),
-)
-
-product_part = Table(
-    "product_part",
-    Base.metadata,
-    Column("product_id", ForeignKey("product.id"), primary_key=True),
-    Column("part_id", ForeignKey("part.id"), primary_key=True),
-)
-
-container_part = Table(
-    "container_part",
-    Base.metadata,
-    Column("container_id", ForeignKey("container.id"), primary_key=True),
-    Column("part_id", ForeignKey("part.id"), primary_key=True),
-)
+if TYPE_CHECKING:
+    from app.invoice.models import Invoice
 
 
 class Product(Base):
@@ -40,12 +22,10 @@ class Product(Base):
     description: Mapped[str]
     self_cost: Mapped[Optional[float]]
     markup: Mapped[str]
-    containers: Mapped[List["Container"]] = relationship(
-        back_populates="products", secondary=product_container
+    containers_r: Mapped[List["ProductContainer"]] = relationship(
+        back_populates="product"
     )
-    parts: Mapped[List["Part"]] = relationship(
-        back_populates="products", secondary=product_part
-    )
+    parts_r: Mapped[List["ProductPart"]] = relationship(back_populates="product")
 
 
 class Container(Base):
@@ -59,12 +39,7 @@ class Container(Base):
     description: Mapped[str]
     self_cost: Mapped[Optional[float]]
     markup: Mapped[JSON] = mapped_column(JSON)
-    parts: Mapped[List["Part"]] = relationship(
-        back_populates="containers", secondary=container_part
-    )
-    products: Mapped[List["Product"]] = relationship(
-        back_populates="containers", secondary=product_container
-    )
+    parts_r: Mapped[List["ContainerPart"]] = relationship(back_populates="container")
 
 
 class Part(Base):
@@ -76,9 +51,92 @@ class Part(Base):
     description: Mapped[str]
     self_cost: Mapped[Optional[float]]
     markup: Mapped[JSON] = mapped_column(JSON)
-    products: Mapped[List["Product"]] = relationship(
-        back_populates="parts", secondary=product_part
+
+
+class ProductLot(Base):
+    __tablename__ = "product_lot"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    quantity: Mapped[int] = mapped_column(default=1)
+    price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("product.id", ondelete="CASCADE")
     )
-    containers: Mapped[List["Container"]] = relationship(
-        back_populates="parts", secondary=container_part
+    product: Mapped["Product"] = relationship()
+    invoice_id: Mapped[int] = mapped_column(
+        ForeignKey("invoice.id", ondelete="CASCADE")
     )
+    invoice: Mapped["Invoice"] = relationship(back_populates="product_lots")
+
+
+class ContainerLot(Base):
+    __tablename__ = "container_lot"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    quantity: Mapped[int] = mapped_column(default=1)
+    price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
+    container_id: Mapped[int] = mapped_column(
+        ForeignKey("container.id", ondelete="CASCADE")
+    )
+    container: Mapped["Container"] = relationship()
+    invoice_id: Mapped[int] = mapped_column(
+        ForeignKey("invoice.id", ondelete="CASCADE")
+    )
+    invoice: Mapped["Invoice"] = relationship(back_populates="container_lots")
+
+    @property
+    def total(self):
+        return self.price * self.quantity
+
+
+class PartLot(Base):
+    __tablename__ = "part_lot"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    quantity: Mapped[int] = mapped_column(default=1)
+    price: Mapped[float] = mapped_column(Float(decimal_return_scale=2))
+    part_id: Mapped[int] = mapped_column(ForeignKey("part.id", ondelete="CASCADE"))
+    part: Mapped["Part"] = relationship()
+    invoice_id: Mapped[int] = mapped_column(
+        ForeignKey("invoice.id", ondelete="CASCADE")
+    )
+    invoice: Mapped["Invoice"] = relationship(back_populates="part_lots")
+
+    @property
+    def total(self):
+        return self.price * self.quantity
+
+
+class ProductContainer(Base):
+    __tablename__ = "product_container"
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("product.id", ondelete="CASCADE")
+    )
+    product: Mapped["Product"] = relationship(back_populates="containers_r")
+    container_id: Mapped[int] = mapped_column(
+        ForeignKey("container.id", ondelete="CASCADE")
+    )
+    container: Mapped["Container"] = relationship()
+    quantity: Mapped[int] = mapped_column(default=1)
+
+
+class ProductPart(Base):
+    __tablename__ = "product_part"
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("product.id", ondelete="CASCADE")
+    )
+    product: Mapped["Product"] = relationship(back_populates="parts_r")
+    part_id: Mapped[int] = mapped_column(ForeignKey("part.id", ondelete="CASCADE"))
+    part: Mapped["Part"] = relationship()
+    quantity: Mapped[int] = mapped_column(default=1)
+
+
+class ContainerPart(Base):
+    __tablename__ = "container_part"
+    container_id: Mapped[int] = mapped_column(
+        ForeignKey("container.id", ondelete="CASCADE")
+    )
+    container: Mapped["Container"] = relationship(back_populates="parts_r")
+    part_id: Mapped[int] = mapped_column(ForeignKey("part.id", ondelete="CASCADE"))
+    part: Mapped["Part"] = relationship()
+    quantity: Mapped[int] = mapped_column(default=1)

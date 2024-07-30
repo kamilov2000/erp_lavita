@@ -2,8 +2,42 @@ import marshmallow as ma
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 
 from app.choices import MeasumentTypes
-from app.product.models import Container, Part, Product
+from app.product.models import (
+    Container,
+    ContainerPart,
+    Part,
+    Product,
+    ProductContainer,
+    ProductPart,
+)
 from app.base import session
+
+
+class ProductContainerSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model = ProductContainer
+        include_fk = True
+        load_instance = True
+        sqla_session = session
+        exclude = ["created_at", "updated_at", "id"]
+
+
+class ProductPartSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model = ProductPart
+        include_fk = True
+        load_instance = True
+        sqla_session = session
+        exclude = ["created_at", "updated_at", "id"]
+
+
+class ContainerPartSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model = ContainerPart
+        include_fk = True
+        load_instance = True
+        sqla_session = session
+        exclude = ["created_at", "updated_at", "id"]
 
 
 class ProductSchema(SQLAlchemyAutoSchema):
@@ -19,6 +53,8 @@ class ProductSchema(SQLAlchemyAutoSchema):
     updated_at = auto_field(dump_only=True)
     photo = ma.fields.Raw(type="file")
     measurement = ma.fields.Enum(MeasumentTypes, by_value=True)
+    containers_r = ma.fields.Nested(ProductContainerSchema, many=True)
+    parts_r = ma.fields.Nested(ProductPartSchema, many=True)
 
 
 class ContainerSchema(SQLAlchemyAutoSchema):
@@ -33,6 +69,7 @@ class ContainerSchema(SQLAlchemyAutoSchema):
     updated_at = auto_field(dump_only=True)
     photo = ma.fields.Raw(type="file")
     measurement = ma.fields.Enum(MeasumentTypes, by_value=True)
+    parts_r = ma.fields.Nested(ContainerPartSchema, many=True)
 
 
 class PartSchema(SQLAlchemyAutoSchema):
