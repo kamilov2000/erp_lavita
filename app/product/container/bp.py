@@ -29,9 +29,9 @@ class ContainerAllView(MethodView):
     @container.response(201, ContainerSchema)
     def post(self, new_data, token):
         """Add a new container"""
-        item = Container.create(**new_data)
+        session.add(new_data)
         session.commit()
-        return item
+        return new_data
 
 
 @container.route("/<container_id>/")
@@ -55,8 +55,8 @@ class ContainerById(MethodView):
             item = Container.get_by_id(container_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        item.update(update_data)
-        item.commit()
+        ContainerSchema().load(update_data, instance=item, partial=True)
+        session.commit()
         return item
 
     @container.arguments(TokenSchema, location="headers")

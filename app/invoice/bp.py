@@ -27,9 +27,9 @@ class InvoiceAllView(MethodView):
     @invoice.response(201, InvoiceSchema)
     def post(self, new_data, token):
         """Add a new invoice"""
-        item = Invoice.create(**new_data)
+        session.add(new_data)
         session.commit()
-        return item
+        return new_data
 
 
 @invoice.route("/<invoice_id>/")
@@ -53,8 +53,8 @@ class InvoiceById(MethodView):
             item = Invoice.get_by_id(invoice_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        item.update(update_data)
-        item.commit()
+        InvoiceSchema().load(update_data, instance=item, partial=True)
+        session.commit()
         return item
 
     @invoice.arguments(TokenSchema, location="headers")

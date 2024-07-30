@@ -30,9 +30,9 @@ class InvoiceAllView(MethodView):
     @production.response(201, ProductionSchema)
     def post(self, new_data, token):
         """Add a new production"""
-        item = Invoice.create(**new_data)
+        session.add(new_data)
         session.commit()
-        return item
+        return new_data
 
 
 @production.route("/<production_id>/")
@@ -56,8 +56,8 @@ class InvoiceById(MethodView):
             item = Invoice.get_by_id(production_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        item.update(update_data)
-        item.commit()
+        ProductionSchema().load(update_data, instance=item, partial=True)
+        session.commit()
         return item
 
     @production.arguments(TokenSchema, location="headers")

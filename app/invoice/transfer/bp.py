@@ -27,9 +27,9 @@ class InvoiceAllView(MethodView):
     @transfer.response(201, TransferSchema)
     def post(self, new_data, token):
         """Add a new transfer"""
-        item = Invoice.create(**new_data)
+        session.add(new_data)
         session.commit()
-        return item
+        return new_data
 
 
 @transfer.route("/<transfer_id>/")
@@ -53,9 +53,8 @@ class InvoiceById(MethodView):
             item = Invoice.get_by_id(transfer_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        item.update(update_data)
-        item.commit()
-
+        TransferSchema().load(update_data, instance=item, partial=True)
+        session.commit()
         return item
 
     @transfer.arguments(TokenSchema, location="headers")

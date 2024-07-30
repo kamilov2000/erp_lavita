@@ -29,9 +29,9 @@ class PartAllView(MethodView):
     @part.response(201, PartSchema)
     def post(self, new_data, token):
         """Add a new part"""
-        item = Part.create(**new_data)
+        session.add(new_data)
         session.commit()
-        return item
+        return new_data
 
 
 @part.route("/<part_id>/")
@@ -55,8 +55,8 @@ class PartById(MethodView):
             item = Part.get_by_id(part_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        item.update(update_data)
-        item.commit()
+        PartSchema().load(update_data, instance=item, partial=True)
+        session.commit()
         return item
 
     @part.arguments(TokenSchema, location="headers")

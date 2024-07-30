@@ -27,9 +27,9 @@ class WarehouseAllView(MethodView):
     @warehouse.response(201, WarehouseSchema)
     def post(self, new_data, token):
         """Add a new warehouse"""
-        item = Warehouse.create(**new_data)
+        session.add(new_data)
         session.commit()
-        return item
+        return new_data
 
 
 @warehouse.route("/<warehouse_id>/")
@@ -53,8 +53,8 @@ class WarehouseById(MethodView):
             item = Warehouse.get_by_id(warehouse_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        item.update(update_data)
-        item.commit()
+        WarehouseSchema().load(update_data, instance=item, partial=True)
+        session.commit()
         return item
 
     @warehouse.arguments(TokenSchema, location="headers")
