@@ -72,7 +72,7 @@ class InvoiceSchema(SQLAlchemyAutoSchema):
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
-    files = ma.fields.Nested("FileSchema", many=True)
+    files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
 
 
 class ProductionSchema(SQLAlchemyAutoSchema):
@@ -90,7 +90,7 @@ class ProductionSchema(SQLAlchemyAutoSchema):
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
-    files = ma.fields.Nested("FileSchema", many=True)
+    files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
 
 
 class ExpenseSchema(SQLAlchemyAutoSchema):
@@ -109,7 +109,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema):
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
-    files = ma.fields.Nested("FileSchema", many=True)
+    files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
 
 
 class TransferSchema(SQLAlchemyAutoSchema):
@@ -126,7 +126,7 @@ class TransferSchema(SQLAlchemyAutoSchema):
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
-    files = ma.fields.Nested("FileSchema", many=True)
+    files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
 
 
 class InvoiceCommentSchema(SQLAlchemyAutoSchema):
