@@ -173,3 +173,5 @@ run.build/
 
 app/config/main.py
 uploads/
+alembic.ini
+migrations/versions/
