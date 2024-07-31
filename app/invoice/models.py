@@ -46,7 +46,7 @@ class Invoice(Base):
     )
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="SET NULL"))
     user: Mapped["User"] = relationship(back_populates="invoices")
-    files: Mapped[List["File"]] = relationship()
+    files: Mapped[List["File"]] = relationship(back_populates="invoice")
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     comments: Mapped[List["InvoiceComment"]] = relationship(back_populates="invoice")
     logs: Mapped[List["InvoiceLog"]] = relationship(back_populates="invoice")

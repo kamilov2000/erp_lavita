@@ -2,6 +2,7 @@ from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 import marshmallow as ma
 from app.base import session
 from app.invoice.models import (
+    File,
     Invoice,
     InvoiceComment,
     InvoiceLog,
@@ -71,6 +72,7 @@ class InvoiceSchema(SQLAlchemyAutoSchema):
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
+    files = ma.fields.Nested("FileSchema", many=True)
 
 
 class ProductionSchema(SQLAlchemyAutoSchema):
@@ -88,6 +90,7 @@ class ProductionSchema(SQLAlchemyAutoSchema):
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
+    files = ma.fields.Nested("FileSchema", many=True)
 
 
 class ExpenseSchema(SQLAlchemyAutoSchema):
@@ -106,6 +109,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema):
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
+    files = ma.fields.Nested("FileSchema", many=True)
 
 
 class TransferSchema(SQLAlchemyAutoSchema):
@@ -122,6 +126,7 @@ class TransferSchema(SQLAlchemyAutoSchema):
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
+    files = ma.fields.Nested("FileSchema", many=True)
 
 
 class InvoiceCommentSchema(SQLAlchemyAutoSchema):
@@ -148,3 +153,19 @@ class InvoiceLogSchema(SQLAlchemyAutoSchema):
     updated_at = auto_field(dump_only=True)
     curr_status = ma.fields.Enum(InvoiceStatuses, by_value=True)
     prev_status = ma.fields.Enum(InvoiceStatuses, by_value=True)
+
+
+class FileWebSchema(ma.Schema):
+    files = ma.fields.List(ma.fields.Raw(type="file"))
+
+
+class FileSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model = File
+        include_fk = True
+        load_instance = True
+        sqla_session = session
+
+    id = auto_field(dump_only=True)
+    created_at = auto_field(dump_only=True)
+    updated_at = auto_field(dump_only=True)

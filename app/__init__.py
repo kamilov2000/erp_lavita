@@ -1,5 +1,6 @@
 import logging
-from flask import Flask, request, make_response
+import os
+from flask import Flask, request, make_response, send_from_directory
 from flask_smorest import Api
 from app.init_db import init_db
 
@@ -43,5 +44,10 @@ def create_app():
     @app.get("/ping")
     def ping():
         return "pong"
+
+    @app.get("/uploads/<path:name>")
+    def download_file(name):
+        path = os.path.abspath(app.config["UPLOAD_FOLDER"])
+        return send_from_directory(path, name)
 
     return app
