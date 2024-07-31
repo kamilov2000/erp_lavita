@@ -48,10 +48,10 @@ def register_update_photos_route(bp, route, response_schema):
 
 
 register_update_photos_route(invoice_bp, "/<invoice_id>/update_photos/", InvoiceSchema)
-register_update_photos_route(expense_bp, "/<invoice_id>/update_photos/", ExpenseSchema)
+register_update_photos_route(expense_bp, "/<expense_id>/update_photos/", ExpenseSchema)
 register_update_photos_route(
-    transfer_bp, "/<invoice_id>/update_photos/", TransferSchema
+    transfer_bp, "/<transfer_id>/update_photos/", TransferSchema
 )
 register_update_photos_route(
-    production_bp, "/<invoice_id>/update_photos/", ProductionSchema
+    production_bp, "/<production_id>/update_photos/", ProductionSchema
 )
