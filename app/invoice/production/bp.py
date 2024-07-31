@@ -56,7 +56,8 @@ class InvoiceById(MethodView):
             item = Invoice.get_by_id(production_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        ProductionSchema().load(update_data, instance=item, partial=True)
+        update_data.id = production_id
+        session.merge(update_data)
         session.commit()
         return item
 

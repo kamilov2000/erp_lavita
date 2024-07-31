@@ -53,7 +53,8 @@ class WarehouseById(MethodView):
             item = Warehouse.get_by_id(warehouse_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        WarehouseSchema().load(update_data, instance=item, partial=True)
+        update_data.id = warehouse_id
+        session.merge(update_data)
         session.commit()
         return item
 

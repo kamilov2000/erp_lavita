@@ -55,7 +55,8 @@ class ProductById(MethodView):
             item = Product.get_by_id(product_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        ProductSchema().load(update_data, instance=item, partial=True)
+        update_data.id = product_id
+        session.merge(update_data)
         session.commit()
         return item
 
