@@ -6,7 +6,7 @@ from app.invoice.models import File, Invoice
 from app.invoice.schema import FileWebSchema, InvoiceQueryArgSchema, InvoiceSchema
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.func import hash_image_save, msg_response, token_required
+from app.utils.func import hash_image_save, token_required
 from app.utils.schema import ResponseSchema, TokenSchema
 
 
