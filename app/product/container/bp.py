@@ -1,4 +1,6 @@
 import os
+from flask import current_app
+from sqlalchemy.exc import SQLAlchemyError
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
@@ -33,7 +35,8 @@ class ContainerAllView(MethodView):
         try:
             session.add(new_data)
             session.commit()
-        except:
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
             session.rollback()
             return msg_response("Something went wrong", False), 400
         return new_data

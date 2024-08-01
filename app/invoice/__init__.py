@@ -3,6 +3,7 @@ from app.invoice.models import File, Invoice
 from app.invoice.schema import (
     ExpenseSchema,
     FileWebSchema,
+    InvoiceCommentSchema,
     InvoiceSchema,
     ProductionSchema,
     TransferSchema,
@@ -46,6 +47,16 @@ def register_update_photos_route(bp, route, response_schema):
         session.commit()
         return invoice
 
+
+def register_add_comment_route(bp, route):
+    @bp.post(route)
+    @token_required
+    @bp.arguemnts(InvoiceCommentSchema)
+    @bp.arguemnts(TokenSchema, location="headers")
+    @bp.response(400, ResponseSchema)
+    @bp.response(200, InvoiceCommentSchema)
+    def add_comment(cur_user, data, token, invoice_id):
+        pass
 
 register_update_photos_route(invoice_bp, "/<invoice_id>/update_photos/", InvoiceSchema)
 register_update_photos_route(expense_bp, "/<expense_id>/update_photos/", ExpenseSchema)

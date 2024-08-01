@@ -7,6 +7,7 @@ from sqlalchemy.orm import (
     sessionmaker,
     scoped_session,
 )
+from flask import current_app
 from datetime import datetime, date
 from typing import Optional
 import enum
@@ -31,7 +32,8 @@ class Base(DeclarativeBase):
         try:
             session.add(self)
             session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
             session.rollback()
         return self
 

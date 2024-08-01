@@ -1,4 +1,6 @@
-from app.utils.func import msg_response
+from app.utils.func import msg_response, token_required
+from sqlalchemy.exc import SQLAlchemyError
+from flask import current_app
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
@@ -19,23 +21,27 @@ production = Blueprint(
 
 @production.route("/")
 class InvoiceAllView(MethodView):
+    @token_required
     @production.arguments(InvoiceQueryArgSchema, location="query")
     @production.arguments(TokenSchema, location="headers")
     @production.response(200, ProductionSchema(many=True))
-    def get(self, args, token):
+    def get(self, c, args, token):
         """List productions"""
         return Invoice.query.filter_by(**args).all()
 
+    @token_required
     @production.arguments(ProductionSchema)
     @production.arguments(TokenSchema, location="headers")
     @production.response(400, ResponseSchema)
     @production.response(201, ProductionSchema)
-    def post(self, new_data, token):
+    def post(self, c, new_data, token):
         """Add a new production"""
         try:
+            new_data.user_id = c.id
             session.add(new_data)
             session.commit()
-        except:
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
             session.rollback()
             return msg_response("Something went wrong", False), 400
         return new_data
@@ -43,9 +49,10 @@ class InvoiceAllView(MethodView):
 
 @production.route("/<production_id>/")
 class InvoiceById(MethodView):
+    @token_required
     @production.arguments(TokenSchema, location="headers")
     @production.response(200, ProductionSchema)
-    def get(self, token, production_id):
+    def get(self, c, token, production_id):
         """Get production by ID"""
         try:
             item = Invoice.get_by_id(production_id)
@@ -53,10 +60,11 @@ class InvoiceById(MethodView):
             abort(404, message="Item not found.")
         return item
 
+    @token_required
     @production.arguments(ProductionSchema)
     @production.arguments(TokenSchema, location="headers")
     @production.response(200, ProductionSchema)
-    def put(self, update_data, token, production_id):
+    def put(self, c, update_data, token, production_id):
         """Update existing production"""
         try:
             item = Invoice.get_by_id(production_id)
@@ -67,9 +75,10 @@ class InvoiceById(MethodView):
         session.commit()
         return item
 
+    @token_required
     @production.arguments(TokenSchema, location="headers")
     @production.response(204)
-    def delete(self, token, production_id):
+    def delete(self, c, token, production_id):
         """Delete production"""
         try:
             Invoice.delete(production_id)

@@ -1,6 +1,8 @@
 from app.utils.func import msg_response
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
+from flask import current_app
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.warehouse.models import Warehouse
 from app.warehouse.schema import WarehouseQueryArgSchema, WarehouseSchema
@@ -32,7 +34,8 @@ class WarehouseAllView(MethodView):
         try:
             session.add(new_data)
             session.commit()
-        except:
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
             session.rollback()
             return msg_response("Something went wrong", False), 400
         return new_data

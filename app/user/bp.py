@@ -4,6 +4,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 import jwt
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.user.models import User
 from app.user.schema import LoginResponseSchema, LoginSchema, UserSchema
@@ -52,7 +53,8 @@ def register(data):
     try:
         session.add(user)
         session.commit()
-    except:
+    except SQLAlchemyError as e:
+        current_app.logger.error(str(e.args))
         session.rollback()
         return msg_response("Something went wrong", False), 400
     token = jwt.encode(
