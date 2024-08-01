@@ -23,7 +23,7 @@ class InvoiceAllView(MethodView):
     @invoice.arguments(TokenSchema, location="headers")
     @invoice.response(400, ResponseSchema)
     @invoice.response(200, InvoiceSchema(many=True))
-    def get(self, c, args, token):
+    def get(c, self, args, token):
         """List invoices"""
         return Invoice.query.filter_by(**args).all()
 
@@ -32,7 +32,7 @@ class InvoiceAllView(MethodView):
     @invoice.arguments(TokenSchema, location="headers")
     @invoice.response(400, ResponseSchema)
     @invoice.response(201, InvoiceSchema)
-    def post(self, c, new_data, token):
+    def post(c, self, new_data, token):
         """Add a new invoice"""
         try:
             new_data.user_id = c.id
@@ -50,7 +50,7 @@ class InvoiceById(MethodView):
     @token_required
     @invoice.arguments(TokenSchema, location="headers")
     @invoice.response(200, InvoiceSchema)
-    def get(self, c, token, invoice_id):
+    def get(c, self, token, invoice_id):
         """Get invoice by ID"""
         try:
             item = Invoice.get_by_id(invoice_id)
@@ -62,7 +62,7 @@ class InvoiceById(MethodView):
     @invoice.arguments(InvoiceSchema)
     @invoice.arguments(TokenSchema, location="headers")
     @invoice.response(200, InvoiceSchema)
-    def put(self, c, update_data, token, invoice_id):
+    def put(c, self, update_data, token, invoice_id):
         """Update existing invoice"""
         try:
             item = Invoice.get_by_id(invoice_id)
@@ -76,7 +76,7 @@ class InvoiceById(MethodView):
     @token_required
     @invoice.arguments(TokenSchema, location="headers")
     @invoice.response(204)
-    def delete(self, c, token, invoice_id):
+    def delete(c, self, token, invoice_id):
         """Delete invoice"""
         try:
             Invoice.delete(invoice_id)

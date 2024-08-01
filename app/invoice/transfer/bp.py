@@ -22,7 +22,7 @@ class InvoiceAllView(MethodView):
     @transfer.arguments(InvoiceQueryArgSchema, location="query")
     @transfer.arguments(TokenSchema, location="headers")
     @transfer.response(200, TransferSchema(many=True))
-    def get(self, c, args, token):
+    def get(c, self, args, token):
         """List transfers"""
         return Invoice.query.filter_by(**args).all()
 
@@ -31,7 +31,7 @@ class InvoiceAllView(MethodView):
     @transfer.arguments(TokenSchema, location="headers")
     @transfer.response(400, ResponseSchema)
     @transfer.response(201, TransferSchema)
-    def post(self, c, new_data, token):
+    def post(c, self, new_data, token):
         """Add a new transfer"""
         try:
             new_data.user_id = c.id
@@ -49,7 +49,7 @@ class InvoiceById(MethodView):
     @token_required
     @transfer.arguments(TokenSchema, location="headers")
     @transfer.response(200, TransferSchema)
-    def get(self, c, token, transfer_id):
+    def get(c, self, token, transfer_id):
         """Get transfer by ID"""
         try:
             item = Invoice.get_by_id(transfer_id)
@@ -61,7 +61,7 @@ class InvoiceById(MethodView):
     @transfer.arguments(TransferSchema)
     @transfer.arguments(TokenSchema, location="headers")
     @transfer.response(200, TransferSchema)
-    def put(self, c, update_data, token, transfer_id):
+    def put(c, self, update_data, token, transfer_id):
         """Update existing transfer"""
         try:
             item = Invoice.get_by_id(transfer_id)
@@ -75,7 +75,7 @@ class InvoiceById(MethodView):
     @token_required
     @transfer.arguments(TokenSchema, location="headers")
     @transfer.response(204)
-    def delete(self, c, token, transfer_id):
+    def delete(c, self, token, transfer_id):
         """Delete transfer"""
         try:
             Invoice.delete(transfer_id)

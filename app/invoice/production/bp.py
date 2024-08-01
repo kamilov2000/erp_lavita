@@ -25,7 +25,7 @@ class InvoiceAllView(MethodView):
     @production.arguments(InvoiceQueryArgSchema, location="query")
     @production.arguments(TokenSchema, location="headers")
     @production.response(200, ProductionSchema(many=True))
-    def get(self, c, args, token):
+    def get(c, self, args, token):
         """List productions"""
         return Invoice.query.filter_by(**args).all()
 
@@ -34,7 +34,7 @@ class InvoiceAllView(MethodView):
     @production.arguments(TokenSchema, location="headers")
     @production.response(400, ResponseSchema)
     @production.response(201, ProductionSchema)
-    def post(self, c, new_data, token):
+    def post(c, self, new_data, token):
         """Add a new production"""
         try:
             new_data.user_id = c.id
@@ -52,7 +52,7 @@ class InvoiceById(MethodView):
     @token_required
     @production.arguments(TokenSchema, location="headers")
     @production.response(200, ProductionSchema)
-    def get(self, c, token, production_id):
+    def get(c, self, token, production_id):
         """Get production by ID"""
         try:
             item = Invoice.get_by_id(production_id)
@@ -64,7 +64,7 @@ class InvoiceById(MethodView):
     @production.arguments(ProductionSchema)
     @production.arguments(TokenSchema, location="headers")
     @production.response(200, ProductionSchema)
-    def put(self, c, update_data, token, production_id):
+    def put(c, self, update_data, token, production_id):
         """Update existing production"""
         try:
             item = Invoice.get_by_id(production_id)
@@ -78,7 +78,7 @@ class InvoiceById(MethodView):
     @token_required
     @production.arguments(TokenSchema, location="headers")
     @production.response(204)
-    def delete(self, c, token, production_id):
+    def delete(c, self, token, production_id):
         """Delete production"""
         try:
             Invoice.delete(production_id)
