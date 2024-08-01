@@ -190,6 +190,7 @@ class InvoiceCommentSchema(SQLAlchemyAutoSchema):
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
+    user_id = auto_field(dump_only=True)
 
 
 class InvoiceLogSchema(SQLAlchemyAutoSchema):
