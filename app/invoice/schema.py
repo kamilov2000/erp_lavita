@@ -22,7 +22,7 @@ class ProductLotSchema(SQLAlchemyAutoSchema):
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
-    invoice_id = auto_field(required=False)
+    invoice_id = auto_field(dump_only=True)
 
 
 class ContainerLotSchema(SQLAlchemyAutoSchema):
@@ -35,7 +35,7 @@ class ContainerLotSchema(SQLAlchemyAutoSchema):
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
-    invoice_id = auto_field(required=False)
+    invoice_id = auto_field(dump_only=True)
 
 
 class PartLotSchema(SQLAlchemyAutoSchema):
@@ -48,7 +48,7 @@ class PartLotSchema(SQLAlchemyAutoSchema):
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
-    invoice_id = auto_field(required=False)
+    invoice_id = auto_field(dump_only=True)
 
 
 class InvoiceQueryArgSchema(ma.Schema):
