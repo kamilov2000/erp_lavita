@@ -21,6 +21,8 @@ class ProductContainerSchema(SQLAlchemyAutoSchema):
         sqla_session = session
         exclude = ["created_at", "updated_at", "id"]
 
+    product_id = auto_field(required=False)
+
 
 class ProductPartSchema(SQLAlchemyAutoSchema):
     class Meta:
@@ -30,6 +32,8 @@ class ProductPartSchema(SQLAlchemyAutoSchema):
         sqla_session = session
         exclude = ["created_at", "updated_at", "id"]
 
+    product_id = auto_field(required=False)
+
 
 class ContainerPartSchema(SQLAlchemyAutoSchema):
     class Meta:
@@ -38,6 +42,8 @@ class ContainerPartSchema(SQLAlchemyAutoSchema):
         load_instance = True
         sqla_session = session
         exclude = ["created_at", "updated_at", "id"]
+
+    container_id = auto_field(required=False)
 
 
 class ProductSchema(SQLAlchemyAutoSchema):
