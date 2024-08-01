@@ -1,3 +1,4 @@
+from app.utils.func import msg_response
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
@@ -5,7 +6,7 @@ from app.invoice.models import Invoice
 from app.invoice.schema import InvoiceQueryArgSchema, TransferSchema
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.schema import TokenSchema
+from app.utils.schema import ResponseSchema, TokenSchema
 
 
 transfer = Blueprint(
@@ -24,11 +25,16 @@ class InvoiceAllView(MethodView):
 
     @transfer.arguments(TransferSchema)
     @transfer.arguments(TokenSchema, location="headers")
+    @transfer.response(400, ResponseSchema)
     @transfer.response(201, TransferSchema)
     def post(self, new_data, token):
         """Add a new transfer"""
-        session.add(new_data)
-        session.commit()
+        try:
+            session.add(new_data)
+            session.commit()
+        except:
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return new_data
 
 

@@ -26,11 +26,16 @@ class ContainerAllView(MethodView):
 
     @container.arguments(ContainerSchema)
     @container.arguments(TokenSchema, location="headers")
+    @container.response(400, ResponseSchema)
     @container.response(201, ContainerSchema)
     def post(self, new_data, token):
         """Add a new container"""
-        session.add(new_data)
-        session.commit()
+        try:
+            session.add(new_data)
+            session.commit()
+        except:
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return new_data
 
 

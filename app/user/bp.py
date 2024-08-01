@@ -49,8 +49,12 @@ def register(data):
     if user:
         return msg_response("Username is already in use", False), 400
     user = UserSchema().load(data, session=session)
-    session.add(user)
-    session.commit()
+    try:
+        session.add(user)
+        session.commit()
+    except:
+        session.rollback()
+        return msg_response("Something went wrong", False), 400
     token = jwt.encode(
         {
             "public_id": user.id,

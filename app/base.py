@@ -1,4 +1,5 @@
 from sqlalchemy import DateTime, create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -27,8 +28,11 @@ class Base(DeclarativeBase):
     query = session.query_property()
 
     def save(self):
-        session.add(self)
-        session.commit()
+        try:
+            session.add(self)
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
         return self
 
     def to_dict(self, creation=True, with_id=True, with_relations=False):

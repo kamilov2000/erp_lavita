@@ -1,3 +1,4 @@
+from app.utils.func import msg_response
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
@@ -5,7 +6,7 @@ from app.invoice.models import Invoice
 from app.invoice.schema import InvoiceQueryArgSchema, ExpenseSchema
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.schema import TokenSchema
+from app.utils.schema import ResponseSchema, TokenSchema
 
 
 expense = Blueprint(
@@ -24,11 +25,16 @@ class InvoiceAllView(MethodView):
 
     @expense.arguments(ExpenseSchema)
     @expense.arguments(TokenSchema, location="headers")
+    @expense.response(400, ResponseSchema)
     @expense.response(201, ExpenseSchema)
     def post(self, new_data, token):
         """Add a new expense"""
-        session.add(new_data)
-        session.commit()
+        try:
+            session.add(new_data)
+            session.commit()
+        except:
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return new_data
 
 

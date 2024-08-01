@@ -1,3 +1,4 @@
+from app.utils.func import msg_response
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
@@ -5,7 +6,7 @@ from app.invoice.models import Invoice
 from app.invoice.schema import InvoiceQueryArgSchema, InvoiceSchema
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.schema import TokenSchema
+from app.utils.schema import ResponseSchema, TokenSchema
 
 
 invoice = Blueprint(
@@ -17,6 +18,7 @@ invoice = Blueprint(
 class InvoiceAllView(MethodView):
     @invoice.arguments(InvoiceQueryArgSchema, location="query")
     @invoice.arguments(TokenSchema, location="headers")
+    @invoice.response(400, ResponseSchema)
     @invoice.response(200, InvoiceSchema(many=True))
     def get(self, args, token):
         """List invoices"""
@@ -24,11 +26,16 @@ class InvoiceAllView(MethodView):
 
     @invoice.arguments(InvoiceSchema)
     @invoice.arguments(TokenSchema, location="headers")
+    @invoice.response(400, ResponseSchema)
     @invoice.response(201, InvoiceSchema)
     def post(self, new_data, token):
         """Add a new invoice"""
-        session.add(new_data)
-        session.commit()
+        try:
+            session.add(new_data)
+            session.commit()
+        except:
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return new_data
 
 

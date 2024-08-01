@@ -26,11 +26,16 @@ class PartAllView(MethodView):
 
     @part.arguments(PartSchema)
     @part.arguments(TokenSchema, location="headers")
+    @part.response(400, ResponseSchema)
     @part.response(201, PartSchema)
     def post(self, new_data, token):
         """Add a new part"""
-        session.add(new_data)
-        session.commit()
+        try:
+            session.add(new_data)
+            session.commit()
+        except:
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return new_data
 
 

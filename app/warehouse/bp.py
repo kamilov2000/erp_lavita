@@ -1,3 +1,4 @@
+from app.utils.func import msg_response
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
@@ -5,7 +6,7 @@ from app.warehouse.models import Warehouse
 from app.warehouse.schema import WarehouseQueryArgSchema, WarehouseSchema
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.schema import TokenSchema
+from app.utils.schema import ResponseSchema, TokenSchema
 
 
 warehouse = Blueprint(
@@ -24,11 +25,16 @@ class WarehouseAllView(MethodView):
 
     @warehouse.arguments(WarehouseSchema)
     @warehouse.arguments(TokenSchema, location="headers")
+    @warehouse.response(400, ResponseSchema)
     @warehouse.response(201, WarehouseSchema)
     def post(self, new_data, token):
         """Add a new warehouse"""
-        session.add(new_data)
-        session.commit()
+        try:
+            session.add(new_data)
+            session.commit()
+        except:
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return new_data
 
 

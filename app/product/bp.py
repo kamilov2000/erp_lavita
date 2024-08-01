@@ -26,11 +26,16 @@ class ProductAllView(MethodView):
 
     @product.arguments(ProductSchema)
     @product.arguments(TokenSchema, location="headers")
+    @product.response(400, ResponseSchema)
     @product.response(201, ProductSchema)
     def post(self, new_data, token):
         """Add a new product"""
-        session.add(new_data)
-        session.commit()
+        try:
+            session.add(new_data)
+            session.commit()
+        except:
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return new_data
 
 
