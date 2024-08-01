@@ -1,3 +1,4 @@
+from app.choices import InvoiceTypes
 from app.utils.func import msg_response, token_required
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
@@ -37,6 +38,7 @@ class InvoiceAllView(MethodView):
     def post(c, self, new_data, token):
         """Add a new production"""
         try:
+            new_data.type = InvoiceTypes.PRODUCTION
             new_data.user_id = c.id
             session.add(new_data)
             session.commit()

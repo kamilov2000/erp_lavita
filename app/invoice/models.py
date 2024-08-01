@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import List, Optional, TYPE_CHECKING
 import enum
-from app.choices import InvoceTypes, InvoiceStatuses
+from app.choices import InvoiceTypes, InvoiceStatuses
 from app.base import Base
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ class Invoice(Base):
     __tablename__ = "invoice"
 
     type: Mapped[enum.Enum] = mapped_column(
-        Enum(InvoceTypes), default=InvoceTypes.INVOICE
+        Enum(InvoiceTypes), default=InvoiceTypes.INVOICE
     )
     number: Mapped[str]
     status: Mapped[enum.Enum] = mapped_column(

@@ -7,7 +7,7 @@ from app.invoice.models import (
     InvoiceComment,
     InvoiceLog,
     InvoiceStatuses,
-    InvoceTypes,
+    InvoiceTypes,
 )
 from app.product.models import ContainerLot, PartLot, ProductLot
 
@@ -49,7 +49,7 @@ class PartLotSchema(SQLAlchemyAutoSchema):
 
 
 class InvoiceQueryArgSchema(ma.Schema):
-    type = ma.fields.Enum(InvoceTypes, by_value=True, required=False)
+    type = ma.fields.Enum(InvoiceTypes, by_value=True, required=False)
     number = ma.fields.Str(required=False)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, required=False)
     warehouse_sender_id = ma.fields.Int(required=False)
@@ -69,8 +69,7 @@ class InvoiceSchema(SQLAlchemyAutoSchema):
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
-    type = ma.fields.Enum(InvoceTypes, by_value=True, dump_only=True)
-    type = ma.fields.Constant(InvoceTypes.INVOICE, load_only=True)
+    type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
@@ -89,8 +88,7 @@ class ProductionSchema(SQLAlchemyAutoSchema):
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
-    type = ma.fields.Enum(InvoceTypes, by_value=True, dump_only=True)
-    type = ma.fields.Constant(InvoceTypes.PRODUCTION, load_only=True)
+    type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
@@ -109,8 +107,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema):
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
-    type = ma.fields.Enum(InvoceTypes, by_value=True, dump_only=True)
-    type = ma.fields.Constant(InvoceTypes.EXPENSE, load_only=True)
+    type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
@@ -128,8 +125,7 @@ class TransferSchema(SQLAlchemyAutoSchema):
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
-    type = ma.fields.Enum(InvoceTypes, by_value=True, dump_only=True)
-    type = ma.fields.Constant(InvoceTypes.TRANSFER, load_only=True)
+    type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)

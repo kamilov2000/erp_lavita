@@ -13,7 +13,7 @@ class InvoiceStatuses(Enum):
     CANCELED = "canceled"
 
 
-class InvoceTypes(Enum):
+class InvoiceTypes(Enum):
     INVOICE = "invoice"
     PRODUCTION = "production"
     EXPENSE = "expense"
