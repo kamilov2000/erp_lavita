@@ -9,7 +9,7 @@ class MeasumentTypes(Enum):
 
 class InvoiceStatuses(Enum):
     DRAFT = "draft"
-    PUBLIC = "public"
+    PUBLISHED = "published"
     CANCELED = "canceled"
 
 
