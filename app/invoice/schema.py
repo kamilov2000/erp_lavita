@@ -80,12 +80,13 @@ class InvoiceSchema(SQLAlchemyAutoSchema):
     files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
 
     @ma.post_load
-    def calc_price(self, invoice: Invoice, **kwargs):
+    def calc_price(self, data, **kwargs):
+        invoice = Invoice(**data)
         invoice.price = (
             invoice.calc_container_lots_price() + invoice.calc_part_lots_price()
         )
         session.commit()
-        return invoice
+        return data
 
 
 class ProductionSchema(SQLAlchemyAutoSchema):
@@ -108,12 +109,13 @@ class ProductionSchema(SQLAlchemyAutoSchema):
     files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
 
     @ma.post_load
-    def calc_price(self, invoice: Invoice, **kwargs):
+    def calc_price(self, data, **kwargs):
+        invoice = Invoice(**data)
         invoice.price = (
             invoice.calc_container_lots_price() + invoice.calc_product_lots_price()
         )
         session.commit()
-        return invoice
+        return data
 
 
 class ExpenseSchema(SQLAlchemyAutoSchema):
@@ -137,14 +139,15 @@ class ExpenseSchema(SQLAlchemyAutoSchema):
     files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
 
     @ma.post_load
-    def calc_price(self, invoice: Invoice, **kwargs):
+    def calc_price(self, data, **kwargs):
+        invoice = Invoice(**data)
         invoice.price = (
             invoice.calc_container_lots_price()
             + invoice.calc_product_lots_price()
-            + invoice.calc_part_lots_price
+            + invoice.calc_part_lots_price()
         )
         session.commit()
-        return invoice
+        return data
 
 
 class TransferSchema(SQLAlchemyAutoSchema):
@@ -166,14 +169,15 @@ class TransferSchema(SQLAlchemyAutoSchema):
     files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
 
     @ma.post_load
-    def calc_price(self, invoice: Invoice, **kwargs):
+    def calc_price(self, data, **kwargs):
+        invoice = Invoice(**data)
         invoice.price = (
             invoice.calc_container_lots_price()
             + invoice.calc_product_lots_price()
             + invoice.calc_part_lots_price
         )
         session.commit()
-        return invoice
+        return data
 
 
 class InvoiceCommentSchema(SQLAlchemyAutoSchema):
