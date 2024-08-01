@@ -69,11 +69,20 @@ class InvoiceSchema(SQLAlchemyAutoSchema):
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
+    price = auto_field(dump_only=True)
     type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
     files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
+
+    @ma.post_load
+    def calc_price(self, invoice: Invoice, **kwargs):
+        invoice.price = (
+            invoice.calc_container_lots_price() + invoice.calc_part_lots_price()
+        )
+        session.commit()
+        return invoice
 
 
 class ProductionSchema(SQLAlchemyAutoSchema):
@@ -88,11 +97,20 @@ class ProductionSchema(SQLAlchemyAutoSchema):
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
+    price = auto_field(dump_only=True)
     type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
+
+    @ma.post_load
+    def calc_price(self, invoice: Invoice, **kwargs):
+        invoice.price = (
+            invoice.calc_container_lots_price() + invoice.calc_product_lots_price()
+        )
+        session.commit()
+        return invoice
 
 
 class ExpenseSchema(SQLAlchemyAutoSchema):
@@ -107,12 +125,23 @@ class ExpenseSchema(SQLAlchemyAutoSchema):
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
+    price = auto_field(dump_only=True)
     type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
     files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
+
+    @ma.post_load
+    def calc_price(self, invoice: Invoice, **kwargs):
+        invoice.price = (
+            invoice.calc_container_lots_price()
+            + invoice.calc_product_lots_price()
+            + invoice.calc_part_lots_price
+        )
+        session.commit()
+        return invoice
 
 
 class TransferSchema(SQLAlchemyAutoSchema):
@@ -125,12 +154,23 @@ class TransferSchema(SQLAlchemyAutoSchema):
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
+    price = auto_field(dump_only=True)
     type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
     files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
+
+    @ma.post_load
+    def calc_price(self, invoice: Invoice, **kwargs):
+        invoice.price = (
+            invoice.calc_container_lots_price()
+            + invoice.calc_product_lots_price()
+            + invoice.calc_part_lots_price
+        )
+        session.commit()
+        return invoice
 
 
 class InvoiceCommentSchema(SQLAlchemyAutoSchema):

@@ -56,6 +56,21 @@ class Invoice(Base):
     )
     part_lots: Mapped[List["PartLot"]] = relationship(back_populates="invoice")
 
+    def calc_container_lots_price(self):
+        if self.container_lots:
+            return sum([i.price * i.quantity for i in self.container_lots])
+        return 0
+
+    def calc_part_lots_price(self):
+        if self.part_lots:
+            return sum([i.price * i.quantity for i in self.part_lots])
+        return 0
+
+    def calc_product_lots_price(self):
+        if self.product_lots:
+            return sum([i.price * i.quantity for i in self.product_lots])
+        return 0
+
 
 class InvoiceComment(Base):
     __tablename__ = "invoice_comment"
