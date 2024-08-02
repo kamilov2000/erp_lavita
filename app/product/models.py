@@ -5,10 +5,16 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, Optional, TYPE_CHECKING
 import enum
 from app.choices import MeasumentTypes
-from app.base import Base
+from app.base import Base, session
 
 if TYPE_CHECKING:
     from app.invoice.models import Invoice
+
+
+class LotBase:
+    def calc_total_sum(self):
+        self.total_sum = self.quantity * self.price
+        session.commit()
 
 
 class Product(Base):
@@ -53,12 +59,13 @@ class Part(Base):
     markup: Mapped[JSON] = mapped_column(JSON)
 
 
-class ProductLot(Base):
+class ProductLot(Base, LotBase):
     __tablename__ = "product_lot"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
+    total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     product_id: Mapped[int] = mapped_column(
         ForeignKey("product.id", ondelete="CASCADE")
     )
@@ -69,12 +76,13 @@ class ProductLot(Base):
     invoice: Mapped["Invoice"] = relationship(back_populates="product_lots")
 
 
-class ContainerLot(Base):
+class ContainerLot(Base, LotBase):
     __tablename__ = "container_lot"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
+    total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     container_id: Mapped[int] = mapped_column(
         ForeignKey("container.id", ondelete="CASCADE")
     )
@@ -84,27 +92,20 @@ class ContainerLot(Base):
     )
     invoice: Mapped["Invoice"] = relationship(back_populates="container_lots")
 
-    @property
-    def total(self):
-        return self.price * self.quantity
 
-
-class PartLot(Base):
+class PartLot(Base, LotBase):
     __tablename__ = "part_lot"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[float] = mapped_column(Float(decimal_return_scale=2))
+    total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     part_id: Mapped[int] = mapped_column(ForeignKey("part.id", ondelete="CASCADE"))
     part: Mapped["Part"] = relationship()
     invoice_id: Mapped[int] = mapped_column(
         ForeignKey("invoice.id", ondelete="CASCADE")
     )
     invoice: Mapped["Invoice"] = relationship(back_populates="part_lots")
-
-    @property
-    def total(self):
-        return self.price * self.quantity
 
 
 class ProductContainer(Base):

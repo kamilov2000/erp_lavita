@@ -31,6 +31,10 @@ class User(Base):
     )
     invoices: Mapped[List["Invoice"]] = relationship(back_populates="user")
 
+    @property
+    def full_name(self) -> str:
+        return f"{self.last_name or ''} {self.first_name or ''}"
+
     def set_password(self, password):
         self.password = generate_password_hash(password)
 

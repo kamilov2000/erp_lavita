@@ -48,6 +48,7 @@ class Invoice(Base):
     user: Mapped["User"] = relationship(back_populates="invoices")
     files: Mapped[List["File"]] = relationship(back_populates="invoice")
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
+    quantity: Mapped[Optional[int]]
     comments: Mapped[List["InvoiceComment"]] = relationship(back_populates="invoice")
     logs: Mapped[List["InvoiceLog"]] = relationship(back_populates="invoice")
     product_lots: Mapped[List["ProductLot"]] = relationship(back_populates="invoice")
@@ -69,6 +70,21 @@ class Invoice(Base):
     def calc_product_lots_price(self):
         if self.product_lots:
             return sum([i.price * i.quantity for i in self.product_lots])
+        return 0
+
+    def calc_container_lots_quantity(self):
+        if self.container_lots:
+            return sum([i.quantity for i in self.container_lots])
+        return 0
+
+    def calc_part_lots_quantity(self):
+        if self.part_lots:
+            return sum([i.quantity for i in self.part_lots])
+        return 0
+
+    def calc_product_lots_quantity(self):
+        if self.product_lots:
+            return sum([i.quantity for i in self.product_lots])
         return 0
 
 

@@ -3,18 +3,16 @@ from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 
 from app.user.models import User
 from app.base import session
+from app.utils.schema import DefaultDumpsSchema
 
 
-class UserSchema(SQLAlchemyAutoSchema):
+class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = User
         include_fk = True
         load_instance = True
         sqla_session = session
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
     role = auto_field(dump_only=True)
     password = auto_field(load_only=True)
 

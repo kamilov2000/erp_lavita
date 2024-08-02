@@ -10,45 +10,67 @@ from app.invoice.models import (
     InvoiceTypes,
 )
 from app.product.models import ContainerLot, PartLot, ProductLot
+from app.utils.schema import BaseInvoiceSchema, DefaultDumpsSchema
 
 
-class ProductLotSchema(SQLAlchemyAutoSchema):
+class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = ProductLot
         include_fk = True
         load_instance = True
         sqla_session = session
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
     invoice_id = auto_field(dump_only=True)
+    product_name = ma.fields.Method("get_product_name")
+
+    @staticmethod
+    def get_product_name(obj):
+        return obj.product.name
+
+    @ma.post_load
+    def calc_price(self, data, **kwargs):
+        data["total_sum"] = data.get("quantity") * data.get("price")
+        return data
 
 
-class ContainerLotSchema(SQLAlchemyAutoSchema):
+class ContainerLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = ContainerLot
         include_fk = True
         load_instance = True
         sqla_session = session
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
     invoice_id = auto_field(dump_only=True)
+    container_name = ma.fields.Method("get_container_name")
+
+    @staticmethod
+    def get_container_name(obj):
+        return obj.container.name
+
+    @ma.post_load
+    def calc_price(self, data, **kwargs):
+        data["total_sum"] = data.get("quantity") * data.get("price")
+        return data
 
 
-class PartLotSchema(SQLAlchemyAutoSchema):
+class PartLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = PartLot
         include_fk = True
         load_instance = True
         sqla_session = session
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
     invoice_id = auto_field(dump_only=True)
+    part_name = ma.fields.Method("get_part_name")
+
+    @staticmethod
+    def get_part_name(obj):
+        return obj.part.name
+
+    @ma.post_load
+    def calc_price(self, data, **kwargs):
+        data["total_sum"] = data.get("quantity") * data.get("price")
+        return data
 
 
 class InvoiceQueryArgSchema(ma.Schema):
@@ -60,7 +82,7 @@ class InvoiceQueryArgSchema(ma.Schema):
     user_id = ma.fields.Int(required=False)
 
 
-class InvoiceSchema(SQLAlchemyAutoSchema):
+class InvoiceSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
     class Meta:
         model = Invoice
         include_fk = True
@@ -68,28 +90,12 @@ class InvoiceSchema(SQLAlchemyAutoSchema):
         exclude = ["warehouse_sender_id"]
         sqla_session = session
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
-    user_id = auto_field(dump_only=True)
-    price = auto_field(dump_only=True)
-    type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
-    status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
-    files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
-
-    @ma.post_load
-    def calc_price(self, data, **kwargs):
-        invoice = Invoice(**data)
-        invoice.price = (
-            invoice.calc_container_lots_price() + invoice.calc_part_lots_price()
-        )
-        session.commit()
-        return data
+    warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
 
 
-class ProductionSchema(SQLAlchemyAutoSchema):
+class ProductionSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
     class Meta:
         model = Invoice
         include_fk = True
@@ -97,28 +103,12 @@ class ProductionSchema(SQLAlchemyAutoSchema):
         exclude = ["warehouse_sender_id"]
         sqla_session = session
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
-    user_id = auto_field(dump_only=True)
-    price = auto_field(dump_only=True)
-    type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
-    status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
-    files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
-
-    @ma.post_load
-    def calc_price(self, data, **kwargs):
-        invoice = Invoice(**data)
-        invoice.price = (
-            invoice.calc_container_lots_price() + invoice.calc_product_lots_price()
-        )
-        session.commit()
-        return data
+    warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
 
 
-class ExpenseSchema(SQLAlchemyAutoSchema):
+class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
     class Meta:
         model = Invoice
         include_fk = True
@@ -126,83 +116,42 @@ class ExpenseSchema(SQLAlchemyAutoSchema):
         exclude = ["warehouse_sender_id"]
         sqla_session = session
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
-    user_id = auto_field(dump_only=True)
-    price = auto_field(dump_only=True)
-    type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
-    status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
-    files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
-
-    @ma.post_load
-    def calc_price(self, data, **kwargs):
-        invoice = Invoice(**data)
-        invoice.price = (
-            invoice.calc_container_lots_price()
-            + invoice.calc_product_lots_price()
-            + invoice.calc_part_lots_price()
-        )
-        session.commit()
-        return data
+    warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
 
 
-class TransferSchema(SQLAlchemyAutoSchema):
+class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
     class Meta:
         model = Invoice
         include_fk = True
         load_instance = True
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
-    user_id = auto_field(dump_only=True)
-    price = auto_field(dump_only=True)
-    type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
-    status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
-    files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
-
-    @ma.post_load
-    def calc_price(self, data, **kwargs):
-        invoice = Invoice(**data)
-        invoice.price = (
-            invoice.calc_container_lots_price()
-            + invoice.calc_product_lots_price()
-            + invoice.calc_part_lots_price
-        )
-        session.commit()
-        return data
+    warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
+    warehouse_sender_name = ma.fields.Method("get_warehouse_sender_address")
 
 
-class InvoiceCommentSchema(SQLAlchemyAutoSchema):
+class InvoiceCommentSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = InvoiceComment
         include_fk = True
         load_instance = True
         sqla_session = session
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
 
 
-class InvoiceLogSchema(SQLAlchemyAutoSchema):
+class InvoiceLogSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = InvoiceLog
         include_fk = True
         load_instance = True
         sqla_session = session
 
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
     curr_status = ma.fields.Enum(InvoiceStatuses, by_value=True)
     prev_status = ma.fields.Enum(InvoiceStatuses, by_value=True)
 
@@ -211,13 +160,9 @@ class FileWebSchema(ma.Schema):
     files = ma.fields.List(ma.fields.Raw(type="file"))
 
 
-class FileSchema(SQLAlchemyAutoSchema):
+class FileSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = File
         include_fk = True
         load_instance = True
         sqla_session = session
-
-    id = auto_field(dump_only=True)
-    created_at = auto_field(dump_only=True)
-    updated_at = auto_field(dump_only=True)
