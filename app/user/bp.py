@@ -10,7 +10,7 @@ from app.user.models import User
 from app.user.schema import LoginResponseSchema, LoginSchema, UserSchema
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.func import msg_response
+from app.utils.func import msg_response, token_required
 from app.utils.schema import ResponseSchema, TokenSchema
 
 user = Blueprint(
@@ -69,19 +69,21 @@ def register(data):
 
 @user.route("/<int:id>/")
 class UserByIdView(MethodView):
+    @token_required
     @user.arguments(TokenSchema, location="headers")
     @user.response(200, UserSchema)
-    def get(self, token, id):
+    def get(c, self, token, id):
         try:
             user = User.get_by_id(id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
         return user
 
+    @token_required
     @user.arguments(UserSchema)
     @user.arguments(TokenSchema, location="headers")
     @user.response(200, UserSchema)
-    def patch(self, update_data, token, id):
+    def patch(c, self, update_data, token, id):
         try:
             user = User.get_by_id(id)
         except ItemNotFoundError:

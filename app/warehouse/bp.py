@@ -1,4 +1,4 @@
-from app.utils.func import msg_response
+from app.utils.func import msg_response, token_required
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from flask import current_app
@@ -18,18 +18,20 @@ warehouse = Blueprint(
 
 @warehouse.route("/")
 class WarehouseAllView(MethodView):
+    @token_required
     @warehouse.arguments(WarehouseQueryArgSchema, location="query")
     @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(200, WarehouseSchema(many=True))
-    def get(self, args, token):
+    def get(c, self, args, token):
         """List warehouses"""
         return Warehouse.query.filter_by(**args).all()
 
+    @token_required
     @warehouse.arguments(WarehouseSchema)
     @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(400, ResponseSchema)
     @warehouse.response(201, WarehouseSchema)
-    def post(self, new_data, token):
+    def post(c, self, new_data, token):
         """Add a new warehouse"""
         try:
             session.add(new_data)
@@ -43,9 +45,10 @@ class WarehouseAllView(MethodView):
 
 @warehouse.route("/<warehouse_id>/")
 class WarehouseById(MethodView):
+    @token_required
     @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(200, WarehouseSchema)
-    def get(self, token, warehouse_id):
+    def get(c, self, token, warehouse_id):
         """Get warehouse by ID"""
         try:
             item = Warehouse.get_by_id(warehouse_id)
@@ -53,10 +56,11 @@ class WarehouseById(MethodView):
             abort(404, message="Item not found.")
         return item
 
+    @token_required
     @warehouse.arguments(WarehouseSchema)
     @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(200, WarehouseSchema)
-    def put(self, update_data, token, warehouse_id):
+    def put(c, self, update_data, token, warehouse_id):
         """Update existing warehouse"""
         try:
             item = Warehouse.get_by_id(warehouse_id)
@@ -67,9 +71,10 @@ class WarehouseById(MethodView):
         session.commit()
         return item
 
+    @token_required
     @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(204)
-    def delete(self, token, warehouse_id):
+    def delete(c, self, token, warehouse_id):
         """Delete warehouse"""
         try:
             Warehouse.delete(warehouse_id)

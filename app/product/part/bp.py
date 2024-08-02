@@ -19,18 +19,20 @@ part = Blueprint(
 
 @part.route("/")
 class PartAllView(MethodView):
+    @token_required
     @part.arguments(ProductQueryArgSchema, location="query")
     @part.arguments(TokenSchema, location="headers")
     @part.response(200, PartSchema(many=True))
-    def get(self, args, token):
+    def get(c, self, args, token):
         """List parts"""
         return Part.query.filter_by(**args).all()
 
+    @token_required
     @part.arguments(PartSchema)
     @part.arguments(TokenSchema, location="headers")
     @part.response(400, ResponseSchema)
     @part.response(201, PartSchema)
-    def post(self, new_data, token):
+    def post(c, self, new_data, token):
         """Add a new part"""
         try:
             session.add(new_data)
@@ -44,9 +46,10 @@ class PartAllView(MethodView):
 
 @part.route("/<part_id>/")
 class PartById(MethodView):
+    @token_required
     @part.arguments(TokenSchema, location="headers")
     @part.response(200, PartSchema)
-    def get(self, token, part_id):
+    def get(c, self, token, part_id):
         """Get part by ID"""
         try:
             item = Part.get_by_id(part_id)
@@ -54,10 +57,11 @@ class PartById(MethodView):
             abort(404, message="Item not found.")
         return item
 
+    @token_required
     @part.arguments(PartSchema)
     @part.arguments(TokenSchema, location="headers")
     @part.response(200, PartSchema)
-    def put(self, update_data, token, part_id):
+    def put(c, self, update_data, token, part_id):
         """Update existing part"""
         try:
             item = Part.get_by_id(part_id)
@@ -68,9 +72,10 @@ class PartById(MethodView):
         session.commit()
         return item
 
+    @token_required
     @part.arguments(TokenSchema, location="headers")
     @part.response(204)
-    def delete(self, token, part_id):
+    def delete(c, self, token, part_id):
         """Delete part"""
         try:
             Part.delete(part_id)

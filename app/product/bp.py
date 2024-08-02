@@ -19,18 +19,20 @@ product = Blueprint(
 
 @product.route("/")
 class ProductAllView(MethodView):
+    @token_required
     @product.arguments(ProductQueryArgSchema, location="query")
     @product.arguments(TokenSchema, location="headers")
     @product.response(200, ProductSchema(many=True))
-    def get(self, args, token):
+    def get(c, self, args, token):
         """List products"""
         return Product.query.filter_by(**args).all()
 
+    @token_required
     @product.arguments(ProductSchema)
     @product.arguments(TokenSchema, location="headers")
     @product.response(400, ResponseSchema)
     @product.response(201, ProductSchema)
-    def post(self, new_data, token):
+    def post(c, self, new_data, token):
         """Add a new product"""
         try:
             session.add(new_data)
@@ -44,9 +46,10 @@ class ProductAllView(MethodView):
 
 @product.route("/<product_id>/")
 class ProductById(MethodView):
+    @token_required
     @product.arguments(TokenSchema, location="headers")
     @product.response(200, ProductSchema)
-    def get(self, token, product_id):
+    def get(c, self, token, product_id):
         """Get product by ID"""
         try:
             item = Product.get_by_id(product_id)
@@ -54,10 +57,11 @@ class ProductById(MethodView):
             abort(404, message="Item not found.")
         return item
 
+    @token_required
     @product.arguments(ProductSchema)
     @product.arguments(TokenSchema, location="headers")
     @product.response(200, ProductSchema)
-    def put(self, update_data, token, product_id):
+    def put(c, self, update_data, token, product_id):
         """Update existing product"""
         try:
             item = Product.get_by_id(product_id)
@@ -68,9 +72,10 @@ class ProductById(MethodView):
         session.commit()
         return item
 
+    @token_required
     @product.arguments(TokenSchema, location="headers")
     @product.response(204)
-    def delete(self, token, product_id):
+    def delete(c, self, token, product_id):
         """Delete product"""
         try:
             Product.delete(product_id)

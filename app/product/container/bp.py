@@ -19,18 +19,20 @@ container = Blueprint(
 
 @container.route("/")
 class ContainerAllView(MethodView):
+    @token_required
     @container.arguments(ProductQueryArgSchema, location="query")
     @container.arguments(TokenSchema, location="headers")
     @container.response(200, ContainerSchema(many=True))
-    def get(self, args, token):
+    def get(c, self, args, token):
         """List containers"""
         return Container.query.filter_by(**args).all()
 
+    @token_required
     @container.arguments(ContainerSchema)
     @container.arguments(TokenSchema, location="headers")
     @container.response(400, ResponseSchema)
     @container.response(201, ContainerSchema)
-    def post(self, new_data, token):
+    def post(c, self, new_data, token):
         """Add a new container"""
         try:
             session.add(new_data)
@@ -44,9 +46,10 @@ class ContainerAllView(MethodView):
 
 @container.route("/<container_id>/")
 class ContainerById(MethodView):
+    @token_required
     @container.arguments(TokenSchema, location="headers")
     @container.response(200, ContainerSchema)
-    def get(self, token, container_id):
+    def get(c, self, token, container_id):
         """Get container by ID"""
         try:
             item = Container.get_by_id(container_id)
@@ -54,10 +57,11 @@ class ContainerById(MethodView):
             abort(404, message="Item not found.")
         return item
 
+    @token_required
     @container.arguments(ContainerSchema)
     @container.arguments(TokenSchema, location="headers")
     @container.response(200, ContainerSchema)
-    def put(self, update_data, token, container_id):
+    def put(c, self, update_data, token, container_id):
         """Update existing container"""
         try:
             item = Container.get_by_id(container_id)
@@ -68,9 +72,10 @@ class ContainerById(MethodView):
         session.commit()
         return item
 
+    @token_required
     @container.arguments(TokenSchema, location="headers")
     @container.response(204)
-    def delete(self, token, container_id):
+    def delete(c, self, token, container_id):
         """Delete container"""
         try:
             Container.delete(container_id)
