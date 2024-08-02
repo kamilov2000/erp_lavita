@@ -7,6 +7,7 @@ from app.invoice.schema import (
     ExpenseSchema,
     FileWebSchema,
     InvoiceCommentSchema,
+    InvoiceLogSchema,
     InvoiceSchema,
     ProductionSchema,
     TransferSchema,
@@ -88,6 +89,17 @@ def register_publish_invoice_route(bp, route):
         return msg_response("ok")
 
 
+def register_get_logs_route(bp, route):
+    @bp.get(route)
+    @token_required
+    @bp.arguments(TokenSchema, location="headers")
+    @bp.response(400, ResponseSchema)
+    @bp.response(200, InvoiceLogSchema(many=True))
+    def get_logs(cur_user, token, invoice_id):
+        invoice = Invoice.get_by_id(invoice_id)
+        return invoice.logs if invoice.logs else []
+
+
 def reg_invoice_routes():
     bps = [
         invoice_bp,
@@ -111,6 +123,7 @@ def reg_invoice_routes():
         register_update_photos_route(bp, f"/<{label}>/update_photos/", schema)
         register_add_comment_route(bp, f"/<{label}>/add_comment/")
         register_publish_invoice_route(bp, f"/<{label}>/publish/")
+        register_get_logs_route(bp, f"/<{label}>/logs/")
 
 
 reg_invoice_routes()

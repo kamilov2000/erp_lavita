@@ -1,10 +1,12 @@
-from sqlalchemy import JSON, Float, ForeignKey, Enum, String
+from sqlalchemy import Float, ForeignKey, Enum, String, event, inspect
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm.attributes import get_history
+
 
 from typing import List, Optional, TYPE_CHECKING
 import enum
 from app.choices import InvoiceTypes, InvoiceStatuses
-from app.base import Base
+from app.base import Base, session
 
 if TYPE_CHECKING:
     from app.warehouse.models import Warehouse
@@ -109,4 +111,25 @@ class InvoiceLog(Base):
     invoice: Mapped["Invoice"] = relationship(back_populates="logs")
     curr_status: Mapped[Optional[enum.Enum]] = mapped_column(Enum(InvoiceStatuses))
     prev_status: Mapped[Optional[enum.Enum]] = mapped_column(Enum(InvoiceStatuses))
-    data: Mapped[JSON] = mapped_column(JSON)
+
+
+def log_invoice_changes(mapper, connection, target):
+    sess = session.object_session(target)
+    inspection = inspect(target)
+    if sess.is_modified(target) or target.id is None:
+        prev_status = None
+
+        if getattr(inspection.attrs, "status").history.has_changes():
+            if get_history(target, "status")[2]:
+                prev_status = get_history(target, "status")[2].pop()
+
+        log_entry = InvoiceLog(
+            invoice_id=target.id,
+            curr_status=target.status,
+            prev_status=prev_status,
+        )
+        sess.add(log_entry)
+
+
+event.listen(Invoice, "before_update", log_invoice_changes)
+event.listen(Invoice, "after_insert", log_invoice_changes)
