@@ -21,6 +21,7 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         sqla_session = session
 
     invoice_id = auto_field(dump_only=True)
+    total_sum = auto_field(dump_only=True)
     product_name = ma.fields.Method("get_product_name")
 
     @staticmethod
@@ -41,6 +42,7 @@ class ContainerLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         sqla_session = session
 
     invoice_id = auto_field(dump_only=True)
+    total_sum = auto_field(dump_only=True)
     container_name = ma.fields.Method("get_container_name")
 
     @staticmethod
@@ -61,6 +63,7 @@ class PartLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         sqla_session = session
 
     invoice_id = auto_field(dump_only=True)
+    total_sum = auto_field(dump_only=True)
     part_name = ma.fields.Method("get_part_name")
 
     @staticmethod
