@@ -92,6 +92,7 @@ def register_publish_invoice_route(bp, route):
                 invoice_id=invoice.id,
                 curr_status=invoice.status,
                 prev_status=InvoiceStatuses.DRAFT,
+                user_id=cur_user.id,
             )
             session.add(log)
             session.commit()
