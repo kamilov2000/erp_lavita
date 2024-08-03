@@ -1,3 +1,5 @@
+from app.user.models import User
+from app.user.schema import UserSchema
 from app.utils.func import msg_response, token_required
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
@@ -24,7 +26,11 @@ class WarehouseAllView(MethodView):
     @warehouse.response(200, WarehouseSchema(many=True))
     def get(c, self, args, token):
         """List warehouses"""
-        return Warehouse.query.filter_by(**args).all()
+        user_ids = args.pop("user_ids", None)
+        query = Warehouse.query.filter_by(**args)
+        if user_ids:
+            query = query.join(Warehouse.users).filter(User.id.in_(user_ids))
+        return query.all()
 
     @token_required
     @warehouse.arguments(WarehouseSchema)
@@ -53,7 +59,7 @@ class WarehouseById(MethodView):
         try:
             item = Warehouse.get_by_id(warehouse_id)
         except ItemNotFoundError:
-            abort(404, message="Item not found.")
+            abort(404, message="Warehouse not found.")
         return item
 
     @token_required
@@ -65,7 +71,7 @@ class WarehouseById(MethodView):
         try:
             item = Warehouse.get_by_id(warehouse_id)
         except ItemNotFoundError:
-            abort(404, message="Item not found.")
+            abort(404, message="Warehouse not found.")
         update_data.id = warehouse_id
         session.merge(update_data)
         session.commit()
@@ -79,4 +85,15 @@ class WarehouseById(MethodView):
         try:
             Warehouse.delete(warehouse_id)
         except ItemNotFoundError:
-            abort(404, message="Item not found.")
+            abort(404, message="Warehouse not found.")
+
+
+@warehouse.get("/<warehouse_id>/responsible_users/")
+@token_required
+@warehouse.response(200, UserSchema(many=True))
+def get_responsible_users(c, warehouse_id):
+    try:
+        item = Warehouse.get_by_id(warehouse_id)
+    except ItemNotFoundError:
+        abort(404, message="Warehouse not found.")
+    return item.users
