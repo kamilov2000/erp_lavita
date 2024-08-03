@@ -90,7 +90,6 @@ class PartById(MethodView):
 @part.response(400, ResponseSchema)
 @part.response(200, PartSchema)
 def change_photo(cur_user, photo, token, part_id):
-    print(cur_user)
     part = Part.get_by_id(part_id)
     try:
         path = hash_image_save(photo.get("photo"), "part", part_id)

@@ -90,7 +90,6 @@ class ContainerById(MethodView):
 @container.response(400, ResponseSchema)
 @container.response(200, ContainerSchema)
 def change_photo(cur_user, photo, token, container_id):
-    print(cur_user)
     container = Container.get_by_id(container_id)
     try:
         path = hash_image_save(photo.get("photo"), "container", container_id)

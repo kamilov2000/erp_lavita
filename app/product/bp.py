@@ -90,7 +90,6 @@ class ProductById(MethodView):
 @product.response(400, ResponseSchema)
 @product.response(200, ProductSchema)
 def change_photo(cur_user, photo, token, product_id):
-    print(cur_user)
     product = Product.get_by_id(product_id)
     try:
         path = hash_image_save(photo.get("photo"), "product", product_id)

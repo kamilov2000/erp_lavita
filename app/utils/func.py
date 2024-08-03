@@ -54,19 +54,15 @@ def hash_image_save(
     if not os.path.exists(model_upload_path):
         os.makedirs(model_upload_path, exist_ok=True)
     now = datetime.datetime.now().strftime("%f")
-    print("filename", uploaded_file.filename, flush=True)
     filename = uploaded_file.filename
     if " ." in uploaded_file.filename:
         filename = uploaded_file.filename.replace(" .", f"{now}.")
     secured_filename = secure_filename(filename)
-    print("securedd", secured_filename, flush=True)
     file_ext = secured_filename.rsplit(".", 1)
-    print("file_ext", file_ext, flush=True)
     if len(file_ext) > 1:
         extension = file_ext[1]
     else:
         extension = file_ext[0]
-    print("extension", extension, flush=True)
     # if allowed_extensions is not None and extension.lower() not in allowed_extensions:
     #     raise CustomError("Not allowed extension!")
     hashed_filename = (
@@ -75,7 +71,6 @@ def hash_image_save(
         + "."
         + extension
     )
-    print(hashed_filename, flush=True)
     file_path = os.path.join(model_upload_path, hashed_filename)
     uploaded_file.save(file_path)
     return file_path
