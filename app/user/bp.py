@@ -7,7 +7,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.user.models import User
-from app.user.schema import LoginResponseSchema, LoginSchema, UserSchema
+from app.user.schema import (
+    LoginResponseSchema,
+    LoginSchema,
+    UserQueryArgSchema,
+    UserSchema,
+)
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import msg_response, token_required
@@ -91,3 +96,23 @@ class UserByIdView(MethodView):
         UserSchema().load(update_data, session=session, instance=user)
         session.commit()
         return user
+
+
+@user.get("/")
+@token_required
+@user.arguments(UserQueryArgSchema, location="query")
+@user.arguments(TokenSchema, location="headers")
+@user.response(200, UserSchema(many=True))
+def get_users(c, args, token):
+    query = User.query
+
+    if "username" in args:
+        query = query.filter(User.username.ilike(f"%{args['username']}%"))
+    if "first_name" in args:
+        query = query.filter(User.first_name.ilike(f"%{args['first_name']}%"))
+    if "last_name" in args:
+        query = query.filter(User.last_name.ilike(f"%{args['last_name']}%"))
+    if "role" in args:
+        query = query.filter(User.role.ilike(f"%{args['role']}%"))
+
+    return query.all()

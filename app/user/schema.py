@@ -30,3 +30,10 @@ class LoginSchema(ma.Schema):
 class LoginResponseSchema(ma.Schema):
     token = ma.fields.Str()
     role = ma.fields.Str()
+
+
+class UserQueryArgSchema(ma.Schema):
+    username = ma.fields.Str()
+    first_name = ma.fields.Str()
+    last_name = ma.fields.Str()
+    role = ma.fields.Str()
