@@ -6,6 +6,7 @@ from app.base import Base
 
 if TYPE_CHECKING:
     from app.user.models import User
+    from app.invoice.models import Invoice
 
 
 class Warehouse(Base):
@@ -17,6 +18,19 @@ class Warehouse(Base):
     users: Mapped[List["User"]] = relationship(
         back_populates="warehouses", secondary="warehouse_user"
     )
-    # products: Mapped[List["Product"]] = relationship()
-    # containers: Mapped[List["Container"]] = relationship()
-    # parts: Mapped[List["Part"]] = relationship()
+    invoice_senders: Mapped[List["Invoice"]] = relationship(
+        back_populates="warehouse_sender", foreign_keys="[Invoice.warehouse_sender_id]"
+    )
+    invoice_receivers: Mapped[List["Invoice"]] = relationship(
+        back_populates="warehouse_receiver",
+        foreign_keys="[Invoice.warehouse_receiver_id]",
+    )
+
+    def calc_capacity(self):
+        sent = 0
+        receive = 0
+        if self.invoice_senders:
+            sent = sum([inv.quantity for inv in self.invoice_senders])
+        if self.invoice_receivers:
+            receive = sum([inv.quantity for inv in self.invoice_receivers])
+        return receive - sent

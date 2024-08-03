@@ -38,13 +38,13 @@ class Invoice(Base):
         ForeignKey("warehouse.id", ondelete="SET NULL")
     )
     warehouse_sender: Mapped["Warehouse"] = relationship(
-        foreign_keys=[warehouse_sender_id]
+        foreign_keys=[warehouse_sender_id], back_populates="invoice_senders"
     )
     warehouse_receiver_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("warehouse.id", ondelete="SET NULL")
     )
     warehouse_receiver: Mapped["Warehouse"] = relationship(
-        foreign_keys=[warehouse_receiver_id]
+        foreign_keys=[warehouse_receiver_id], back_populates="invoice_receivers"
     )
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="SET NULL"))
     user: Mapped["User"] = relationship(back_populates="invoices")
@@ -104,7 +104,7 @@ class InvoiceComment(Base):
     __tablename__ = "invoice_comment"
 
     invoice_id: Mapped[int] = mapped_column(
-        ForeignKey("invoice.id", ondelete="SET NULL")
+        ForeignKey("invoice.id", ondelete="CASCADE")
     )
     invoice: Mapped["Invoice"] = relationship(back_populates="comments")
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="SET NULL"))
@@ -116,7 +116,7 @@ class InvoiceLog(Base):
     __tablename__ = "invoice_log"
 
     invoice_id: Mapped[int] = mapped_column(
-        ForeignKey("invoice.id", ondelete="SET NULL")
+        ForeignKey("invoice.id", ondelete="CASCADE")
     )
     invoice: Mapped["Invoice"] = relationship(back_populates="logs")
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="SET NULL"))

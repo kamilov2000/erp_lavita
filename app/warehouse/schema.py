@@ -13,6 +13,13 @@ class WarehouseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         load_instance = True
         sqla_session = session
 
+    users = ma.fields.Nested("UserSchema", many=True)
+    capacity = ma.fields.Method("get_capacity")
+
+    @staticmethod
+    def get_capacity(obj):
+        return obj.calc_capacity()
+
 
 class WarehouseQueryArgSchema(ma.Schema):
     name = ma.fields.Str(required=False)
