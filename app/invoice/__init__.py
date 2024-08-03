@@ -2,7 +2,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
 import os
 from app.choices import InvoiceStatuses
-from app.invoice.models import File, Invoice
+from app.invoice.models import File, Invoice, InvoiceLog
 from app.invoice.schema import (
     ExpenseSchema,
     FileWebSchema,
@@ -35,8 +35,13 @@ def register_update_photos_route(bp, route, response_schema):
         array = []
         for p_file in photo_files:
             try:
+                is_photo = False
+                if p_file.headers["Content-Type"].startswith("image"):
+                    is_photo = True
                 path = hash_image_save(p_file, "invoice", invoice_id)
-                array.append(File(filename=p_file.filename, path=path))
+                array.append(
+                    File(filename=p_file.filename, path=path, is_photo=is_photo)
+                )
             except ItemNotFoundError:
                 pass
                 # return msg_response("Photo not found", False), 400
@@ -79,8 +84,16 @@ def register_publish_invoice_route(bp, route):
     @bp.response(200, ResponseSchema)
     def publish_invoice(cur_user, token, invoice_id):
         invoice = Invoice.get_by_id(invoice_id)
+        if invoice.status != InvoiceStatuses.DRAFT:
+            return msg_response("Invoice should be in draft status to publish")
         invoice.status = InvoiceStatuses.PUBLISHED
         try:
+            log = InvoiceLog(
+                invoice_id=invoice.id,
+                curr_status=invoice.status,
+                prev_status=InvoiceStatuses.DRAFT,
+            )
+            session.add(log)
             session.commit()
         except SQLAlchemyError as e:
             current_app.logger.error(str(e.args))

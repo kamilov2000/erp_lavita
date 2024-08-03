@@ -1,6 +1,5 @@
-from sqlalchemy import Float, ForeignKey, Enum, String, event, inspect
+from sqlalchemy import Float, ForeignKey, Enum, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.orm.attributes import get_history
 
 
 from typing import List, Optional, TYPE_CHECKING
@@ -22,6 +21,7 @@ class File(Base):
     invoice: Mapped["Invoice"] = relationship(back_populates="files")
     filename: Mapped[str] = mapped_column(String(255))
     path: Mapped[str] = mapped_column(String(511))
+    is_photo: Mapped[bool] = mapped_column(default=False)
 
 
 class Invoice(Base):
@@ -89,6 +89,16 @@ class Invoice(Base):
             return sum([i.quantity for i in self.product_lots])
         return 0
 
+    def write_history(self, prev_status=None):
+        log = InvoiceLog(
+            curr_status=self.status,
+            prev_status=None,
+            user_id=self.user_id,
+            invoice_id=self.id,
+        )
+        session.add(log)
+        session.commit()
+
 
 class InvoiceComment(Base):
     __tablename__ = "invoice_comment"
@@ -109,27 +119,7 @@ class InvoiceLog(Base):
         ForeignKey("invoice.id", ondelete="SET NULL")
     )
     invoice: Mapped["Invoice"] = relationship(back_populates="logs")
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="SET NULL"))
+    user: Mapped["User"] = relationship()
     curr_status: Mapped[Optional[enum.Enum]] = mapped_column(Enum(InvoiceStatuses))
     prev_status: Mapped[Optional[enum.Enum]] = mapped_column(Enum(InvoiceStatuses))
-
-
-def log_invoice_changes(mapper, connection, target):
-    sess = session.object_session(target)
-    inspection = inspect(target)
-    if sess.is_modified(target) or target.id is None:
-        prev_status = None
-
-        if getattr(inspection.attrs, "status").history.has_changes():
-            if get_history(target, "status")[2]:
-                prev_status = get_history(target, "status")[2].pop()
-
-        log_entry = InvoiceLog(
-            invoice_id=target.id,
-            curr_status=target.status,
-            prev_status=prev_status,
-        )
-        sess.add(log_entry)
-
-
-event.listen(Invoice, "before_update", log_invoice_changes)
-event.listen(Invoice, "after_insert", log_invoice_changes)

@@ -39,6 +39,7 @@ class InvoiceAllView(MethodView):
             new_data.user_id = c.id
             session.add(new_data)
             session.commit()
+            new_data.write_history()
         except SQLAlchemyError as e:
             current_app.logger.error(str(e.args))
             session.rollback()
