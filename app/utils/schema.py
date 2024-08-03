@@ -3,7 +3,6 @@ from marshmallow_sqlalchemy import auto_field
 
 from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
-from app.base import session
 
 
 class ResponseSchema(ma.Schema):
@@ -40,17 +39,16 @@ class BaseInvoiceSchema:
     @ma.post_load
     def calc_price(self, data, **kwargs):
         invoice = Invoice(**data)
-        invoice.price = (
+        data["price"] = (
             invoice.calc_container_lots_price()
             + invoice.calc_product_lots_price()
             + invoice.calc_part_lots_price()
         )
-        invoice.quantity = (
+        data["quantity"] = (
             invoice.calc_container_lots_quantity()
             + invoice.calc_part_lots_quantity()
             + invoice.calc_product_lots_quantity()
         )
-        session.commit()
         return data
 
     @staticmethod
