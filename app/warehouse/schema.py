@@ -98,7 +98,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     @staticmethod
     def get_get_products(obj):
-        res = {}
+        res = []
         product_info = (
             session.query(Product.name, func.sum(ProductLot.quantity))
             .join(ProductLot)
@@ -108,15 +108,12 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .all()
         )
         for name, quantity in product_info:
-            if res.get(name):
-                res["name"] += quantity
-            else:
-                res["name"] = quantity
+            res.append({"name": name, "quantity": quantity})
         return res
 
     @staticmethod
     def get_get_containers(obj):
-        res = {}
+        res = []
         container_info = (
             session.query(Container.name, func.sum(ContainerLot.quantity))
             .join(ContainerLot)
@@ -126,15 +123,12 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .all()
         )
         for name, quantity in container_info:
-            if res.get(name):
-                res["name"] += quantity
-            else:
-                res["name"] = quantity
+            res.append({"name": name, "quantity": quantity})
         return res
 
     @staticmethod
     def get_get_parts(obj):
-        res = {}
+        res = []
         part_info = (
             session.query(Part.name, func.sum(PartLot.quantity))
             .join(PartLot)
@@ -144,10 +138,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .all()
         )
         for name, quantity in part_info:
-            if res.get(name):
-                res["name"] += quantity
-            else:
-                res["name"] = quantity
+            res.append({"name": name, "quantity": quantity})
         return res
 
 
