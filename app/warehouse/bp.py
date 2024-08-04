@@ -1,5 +1,5 @@
 from app.invoice.models import Invoice
-from app.invoice.schema import InvoiceHistorySchema
+from app.invoice.schema import PagWarehouseHistorySchema
 from app.user.models import User
 from app.user.schema import UserSchema
 from app.utils.func import msg_response, token_required
@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.warehouse.models import Warehouse
 from app.warehouse.schema import (
     PagWarehouseSchema,
+    PaginateQueryArgSchema,
     WarehouseDetailSchema,
     WarehouseQueryArgSchema,
     WarehouseSchema,
@@ -129,9 +130,12 @@ def get_responsible_users(c, token, warehouse_id):
 
 @warehouse.get("/<warehouse_id>/history/")
 @token_required
+@warehouse.arguments(PaginateQueryArgSchema, location="query")
 @warehouse.arguments(TokenSchema, location="headers")
-@warehouse.response(200, InvoiceHistorySchema(many=True))
-def get_history(c, token, warehouse_id):
+@warehouse.response(200, PagWarehouseHistorySchema)
+def get_history(c, args, token, warehouse_id):
+    page = args.pop("page", 1)
+    limit = args.pop("limit", 10)
     try:
         sender_invoices = session.query(Invoice).filter(
             Invoice.warehouse_sender_id == warehouse_id
@@ -143,13 +147,23 @@ def get_history(c, token, warehouse_id):
         )
 
         # Combine the queries using union_all
-        all_invoices = (
-            sender_invoices.union_all(receiver_invoices)
-            .order_by(Invoice.created_at)
-            .all()
+        query = sender_invoices.union_all(receiver_invoices).order_by(
+            Invoice.created_at
         )
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
     except SQLAlchemyError as e:
         current_app.logger.error(str(e.args))
         session.rollback()
         return msg_response("Something went wrong", False), 400
-    return all_invoices
+    response = {
+        "data": data,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "total_count": total_count,
+        },
+    }
+    return response

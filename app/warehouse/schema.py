@@ -179,12 +179,15 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
                 {
                     "name": name,
                     "quantity": quantity,
-                    "updated_at": updated_at.strftime(
-                        "%Y-%m-%dT%H:%M:%S.%f"
-                    ),
+                    "updated_at": updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f"),
                 }
             )
         return res
+
+
+class PaginateQueryArgSchema(ma.Schema):
+    page = ma.fields.Int(default=1)
+    limit = ma.fields.Int(default=1)
 
 
 class WarehouseQueryArgSchema(ma.Schema):

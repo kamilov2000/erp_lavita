@@ -208,3 +208,8 @@ class InvoiceHistorySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     @staticmethod
     def get_user_full_name(obj):
         return obj.user.full_name if obj.user else None
+
+
+class PagWarehouseHistorySchema(ma.Schema):
+    data = ma.fields.Nested(InvoiceHistorySchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)
