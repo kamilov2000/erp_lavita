@@ -99,6 +99,15 @@ class Invoice(Base):
         session.add(log)
         session.commit()
 
+    def get_products(self):
+        return [item.product for item in self.product_lots]
+
+    def get_containers(self):
+        return [item.container for item in self.container_lots]
+
+    def get_parts(self):
+        return [item.part for item in self.part_lots]
+
 
 class InvoiceComment(Base):
     __tablename__ = "invoice_comment"

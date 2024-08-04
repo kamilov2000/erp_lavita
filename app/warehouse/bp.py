@@ -7,7 +7,11 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.warehouse.models import Warehouse
-from app.warehouse.schema import WarehouseQueryArgSchema, WarehouseSchema
+from app.warehouse.schema import (
+    WarehouseDetailSchema,
+    WarehouseQueryArgSchema,
+    WarehouseSchema,
+)
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.schema import ResponseSchema, TokenSchema
@@ -53,7 +57,7 @@ class WarehouseAllView(MethodView):
 class WarehouseById(MethodView):
     @token_required
     @warehouse.arguments(TokenSchema, location="headers")
-    @warehouse.response(200, WarehouseSchema)
+    @warehouse.response(200, WarehouseDetailSchema)
     def get(c, self, token, warehouse_id):
         """Get warehouse by ID"""
         try:
