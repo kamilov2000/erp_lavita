@@ -6,7 +6,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
 from app.invoice.models import Invoice
-from app.invoice.schema import InvoiceQueryArgSchema, ExpenseSchema
+from app.invoice.schema import InvoiceQueryArgSchema, ExpenseSchema, PagExpenseSchema
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.schema import ResponseSchema, TokenSchema
@@ -22,10 +22,26 @@ class InvoiceAllView(MethodView):
     @token_required
     @expense.arguments(InvoiceQueryArgSchema, location="query")
     @expense.arguments(TokenSchema, location="headers")
-    @expense.response(200, ExpenseSchema(many=True))
+    @expense.response(200, PagExpenseSchema)
     def get(c, self, args, token):
         """List expenses"""
-        return Invoice.query.filter_by(**args).all()
+        page = args.pop("page", 1)
+        limit = args.pop("limit", 10)
+        query = Invoice.query.filter_by(type=InvoiceTypes.EXPENSE, **args)
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
+        response = {
+            "data": data,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_pages": total_pages,
+                "total_count": total_count,
+            },
+        }
+
+        return response
 
     @token_required
     @expense.arguments(ExpenseSchema)

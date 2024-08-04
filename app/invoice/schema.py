@@ -10,7 +10,7 @@ from app.invoice.models import (
     InvoiceTypes,
 )
 from app.product.models import ContainerLot, PartLot, ProductLot
-from app.utils.schema import BaseInvoiceSchema, DefaultDumpsSchema
+from app.utils.schema import BaseInvoiceSchema, DefaultDumpsSchema, PaginationSchema
 
 
 class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -77,6 +77,8 @@ class PartLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 
 class InvoiceQueryArgSchema(ma.Schema):
+    page = ma.fields.Int(default=1)
+    limit = ma.fields.Int(default=1)
     type = ma.fields.Enum(InvoiceTypes, by_value=True, required=False)
     number = ma.fields.Str(required=False)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, required=False)
@@ -169,3 +171,23 @@ class FileSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         include_fk = True
         load_instance = True
         sqla_session = session
+
+
+class PagInvoiceSchema(ma.Schema):
+    data = ma.fields.Nested(InvoiceSchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)
+
+
+class PagTransferSchema(ma.Schema):
+    data = ma.fields.Nested(TransferSchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)
+
+
+class PagExpenseSchema(ma.Schema):
+    data = ma.fields.Nested(ExpenseSchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)
+
+
+class PagProductionSchema(ma.Schema):
+    data = ma.fields.Nested(ProductionSchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)

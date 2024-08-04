@@ -11,7 +11,7 @@ from app.product.models import (
     ProductPart,
 )
 from app.base import session
-from app.utils.schema import DefaultDumpsSchema
+from app.utils.schema import DefaultDumpsSchema, PaginationSchema
 
 
 class ProductContainerSchema(SQLAlchemyAutoSchema):
@@ -85,9 +85,26 @@ class PartSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 
 class ProductQueryArgSchema(ma.Schema):
+    page = ma.fields.Int(default=1)
+    limit = ma.fields.Int(default=1)
     measurement = ma.fields.Enum(MeasumentTypes, by_value=True, required=False)
     name = ma.fields.Str(required=False)
 
 
 class PhotoSchema(ma.Schema):
     photo = ma.fields.Raw(type="string", format="binary")
+
+
+class PagProductSchema(ma.Schema):
+    data = ma.fields.Nested(ProductSchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)
+
+
+class PagContainerSchema(ma.Schema):
+    data = ma.fields.Nested(ContainerSchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)
+
+
+class PagPartSchema(ma.Schema):
+    data = ma.fields.Nested(PartSchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)

@@ -5,7 +5,12 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
 from app.product.models import Product
-from app.product.schema import PhotoSchema, ProductQueryArgSchema, ProductSchema
+from app.product.schema import (
+    PagProductSchema,
+    PhotoSchema,
+    ProductQueryArgSchema,
+    ProductSchema,
+)
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
@@ -22,10 +27,26 @@ class ProductAllView(MethodView):
     @token_required
     @product.arguments(ProductQueryArgSchema, location="query")
     @product.arguments(TokenSchema, location="headers")
-    @product.response(200, ProductSchema(many=True))
+    @product.response(200, PagProductSchema)
     def get(c, self, args, token):
         """List products"""
-        return Product.query.filter_by(**args).all()
+        page = args.pop("page", 1)
+        limit = args.pop("limit", 10)
+        query = Product.query.filter_by(**args)
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
+        response = {
+            "data": data,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_pages": total_pages,
+                "total_count": total_count,
+            },
+        }
+
+        return response
 
     @token_required
     @product.arguments(ProductSchema)

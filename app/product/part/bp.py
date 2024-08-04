@@ -5,7 +5,12 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
 from app.product.models import Part
-from app.product.schema import PhotoSchema, ProductQueryArgSchema, PartSchema
+from app.product.schema import (
+    PagPartSchema,
+    PhotoSchema,
+    ProductQueryArgSchema,
+    PartSchema,
+)
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
@@ -22,10 +27,26 @@ class PartAllView(MethodView):
     @token_required
     @part.arguments(ProductQueryArgSchema, location="query")
     @part.arguments(TokenSchema, location="headers")
-    @part.response(200, PartSchema(many=True))
+    @part.response(200, PagPartSchema)
     def get(c, self, args, token):
         """List parts"""
-        return Part.query.filter_by(**args).all()
+        page = args.pop("page", 1)
+        limit = args.pop("limit", 10)
+        query = Part.query.filter_by(**args)
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
+        response = {
+            "data": data,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_pages": total_pages,
+                "total_count": total_count,
+            },
+        }
+
+        return response
 
     @token_required
     @part.arguments(PartSchema)

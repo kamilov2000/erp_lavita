@@ -6,7 +6,11 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
 from app.invoice.models import Invoice
-from app.invoice.schema import InvoiceQueryArgSchema, ProductionSchema
+from app.invoice.schema import (
+    InvoiceQueryArgSchema,
+    PagProductionSchema,
+    ProductionSchema,
+)
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.schema import ResponseSchema, TokenSchema
@@ -25,10 +29,26 @@ class InvoiceAllView(MethodView):
     @token_required
     @production.arguments(InvoiceQueryArgSchema, location="query")
     @production.arguments(TokenSchema, location="headers")
-    @production.response(200, ProductionSchema(many=True))
+    @production.response(200, PagProductionSchema)
     def get(c, self, args, token):
         """List productions"""
-        return Invoice.query.filter_by(**args).all()
+        page = args.pop("page", 1)
+        limit = args.pop("limit", 10)
+        query = Invoice.query.filter_by(type=InvoiceTypes.PRODUCTION, **args)
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
+        response = {
+            "data": data,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_pages": total_pages,
+                "total_count": total_count,
+            },
+        }
+
+        return response
 
     @token_required
     @production.arguments(ProductionSchema)

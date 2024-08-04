@@ -10,6 +10,7 @@ from app.user.models import User
 from app.user.schema import (
     LoginResponseSchema,
     LoginSchema,
+    PagUserSchema,
     UserQueryArgSchema,
     UserSchema,
 )
@@ -102,7 +103,7 @@ class UserByIdView(MethodView):
 @token_required
 @user.arguments(UserQueryArgSchema, location="query")
 @user.arguments(TokenSchema, location="headers")
-@user.response(200, UserSchema(many=True))
+@user.response(200, PagUserSchema)
 def get_users(c, args, token):
     query = User.query
 
@@ -114,5 +115,19 @@ def get_users(c, args, token):
         query = query.filter(User.last_name.ilike(f"%{args['last_name']}%"))
     if "role" in args:
         query = query.filter(User.role.ilike(f"%{args['role']}%"))
+    page = args.pop("page", 1)
+    limit = args.pop("limit", 10)
+    total_count = query.count()
+    total_pages = (total_count + limit - 1) // limit
+    data = query.limit(limit).offset((page - 1) * limit).all()
+    response = {
+        "data": data,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "total_count": total_count,
+        },
+    }
 
-    return query.all()
+    return response

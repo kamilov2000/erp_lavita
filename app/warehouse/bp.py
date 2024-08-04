@@ -8,6 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.warehouse.models import Warehouse
 from app.warehouse.schema import (
+    PagWarehouseSchema,
     WarehouseDetailSchema,
     WarehouseQueryArgSchema,
     WarehouseSchema,
@@ -27,14 +28,29 @@ class WarehouseAllView(MethodView):
     @token_required
     @warehouse.arguments(WarehouseQueryArgSchema, location="query")
     @warehouse.arguments(TokenSchema, location="headers")
-    @warehouse.response(200, WarehouseSchema(many=True))
+    @warehouse.response(200, PagWarehouseSchema)
     def get(c, self, args, token):
         """List warehouses"""
         user_ids = args.pop("user_ids", None)
+        page = args.pop("page", 1)
+        limit = args.pop("limit", 10)
         query = Warehouse.query.filter_by(**args)
         if user_ids:
             query = query.join(Warehouse.users).filter(User.id.in_(user_ids))
-        return query.all()
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
+        response = {
+            "data": data,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_pages": total_pages,
+                "total_count": total_count,
+            },
+        }
+
+        return response
 
     @token_required
     @warehouse.arguments(WarehouseSchema)

@@ -3,7 +3,7 @@ from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 
 from app.user.models import User
 from app.base import session
-from app.utils.schema import DefaultDumpsSchema
+from app.utils.schema import DefaultDumpsSchema, PaginationSchema
 
 
 class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -33,7 +33,14 @@ class LoginResponseSchema(ma.Schema):
 
 
 class UserQueryArgSchema(ma.Schema):
+    page = ma.fields.Int(default=1)
+    limit = ma.fields.Int(default=1)
     username = ma.fields.Str()
     first_name = ma.fields.Str()
     last_name = ma.fields.Str()
     role = ma.fields.Str()
+
+
+class PagUserSchema(ma.Schema):
+    data = ma.fields.Nested(UserSchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)

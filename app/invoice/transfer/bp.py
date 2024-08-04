@@ -6,7 +6,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
 from app.invoice.models import Invoice
-from app.invoice.schema import InvoiceQueryArgSchema, TransferSchema
+from app.invoice.schema import InvoiceQueryArgSchema, PagTransferSchema, TransferSchema
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.schema import ResponseSchema, TokenSchema
@@ -22,10 +22,26 @@ class InvoiceAllView(MethodView):
     @token_required
     @transfer.arguments(InvoiceQueryArgSchema, location="query")
     @transfer.arguments(TokenSchema, location="headers")
-    @transfer.response(200, TransferSchema(many=True))
+    @transfer.response(200, PagTransferSchema)
     def get(c, self, args, token):
         """List transfers"""
-        return Invoice.query.filter_by(**args).all()
+        page = args.pop("page", 1)
+        limit = args.pop("limit", 10)
+        query = Invoice.query.filter_by(type=InvoiceTypes.TRANSFER, **args)
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
+        response = {
+            "data": data,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_pages": total_pages,
+                "total_count": total_count,
+            },
+        }
+
+        return response
 
     @token_required
     @transfer.arguments(TransferSchema)
