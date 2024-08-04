@@ -15,7 +15,7 @@ import enum
 from app.config.main import SQLALCHEMY_URI
 from app.utils.exc import ItemNotFoundError
 
-engine = create_engine(SQLALCHEMY_URI)
+engine = create_engine(SQLALCHEMY_URI, pool_recycle=1800)
 session = scoped_session(sessionmaker(engine))
 
 
@@ -107,5 +107,5 @@ class Base(DeclarativeBase):
         session.commit()
 
 
-for tbl in reversed(Base.metadata.sorted_tables):
-    engine.execute(tbl.delete())
+# for tbl in reversed(Base.metadata.sorted_tables):
+#     engine.execute(tbl.delete())
