@@ -131,7 +131,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
                 {
                     "name": name,
                     "quantity": quantity,
-                    "updated_at": updated_at.strftime(),
+                    "updated_at": updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f"),
                 }
             )
         return res
@@ -152,7 +152,13 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .all()
         )
         for name, quantity, updated_at in container_info:
-            res.append({"name": name, "quantity": quantity, "updated_at": updated_at})
+            res.append(
+                {
+                    "name": name,
+                    "quantity": quantity,
+                    "updated_at": updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                }
+            )
         return res
 
     @staticmethod
@@ -169,7 +175,15 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .all()
         )
         for name, quantity, updated_at in part_info:
-            res.append({"name": name, "quantity": quantity, "updated_at": updated_at})
+            res.append(
+                {
+                    "name": name,
+                    "quantity": quantity,
+                    "updated_at": updated_at.strftime(
+                        "%Y-%m-%dT%H:%M:%S.%f"
+                    ),
+                }
+            )
         return res
 
 
