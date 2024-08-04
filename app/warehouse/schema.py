@@ -127,7 +127,13 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .all()
         )
         for name, quantity, updated_at in product_info:
-            res.append({"name": name, "quantity": quantity, "updated_at": updated_at})
+            res.append(
+                {
+                    "name": name,
+                    "quantity": quantity,
+                    "updated_at": updated_at.strftime(),
+                }
+            )
         return res
 
     @staticmethod
