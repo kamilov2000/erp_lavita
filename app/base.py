@@ -15,8 +15,9 @@ import enum
 from app.config.main import SQLALCHEMY_URI
 from app.utils.exc import ItemNotFoundError
 
-engine = create_engine(SQLALCHEMY_URI, pool_recycle=1800)
-session = scoped_session(sessionmaker(engine))
+engine = create_engine(SQLALCHEMY_URI, pool_recycle=1800, pool_size=20, max_overflow=0)
+session_factory = sessionmaker(bind=engine)
+session = scoped_session(session_factory)
 
 
 class Base(DeclarativeBase):

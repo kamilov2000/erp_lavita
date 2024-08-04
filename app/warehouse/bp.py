@@ -36,12 +36,17 @@ class WarehouseAllView(MethodView):
         user_ids = args.pop("user_ids", None)
         page = args.pop("page", 1)
         limit = args.pop("limit", 10)
-        query = Warehouse.query.filter_by(**args)
-        if user_ids:
-            query = query.join(Warehouse.users).filter(User.id.in_(user_ids))
-        total_count = query.count()
-        total_pages = (total_count + limit - 1) // limit
-        data = query.limit(limit).offset((page - 1) * limit).all()
+        try:
+            query = Warehouse.query.filter_by(**args)
+            if user_ids:
+                query = query.join(Warehouse.users).filter(User.id.in_(user_ids))
+            total_count = query.count()
+            total_pages = (total_count + limit - 1) // limit
+            data = query.limit(limit).offset((page - 1) * limit).all()
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         response = {
             "data": data,
             "pagination": {
@@ -127,17 +132,24 @@ def get_responsible_users(c, token, warehouse_id):
 @warehouse.arguments(TokenSchema, location="headers")
 @warehouse.response(200, InvoiceHistorySchema(many=True))
 def get_history(c, token, warehouse_id):
-    sender_invoices = session.query(Invoice).filter(
-        Invoice.warehouse_sender_id == warehouse_id
-    )
+    try:
+        sender_invoices = session.query(Invoice).filter(
+            Invoice.warehouse_sender_id == warehouse_id
+        )
 
-    # Query for receiver invoices
-    receiver_invoices = session.query(Invoice).filter(
-        Invoice.warehouse_receiver_id == warehouse_id
-    )
+        # Query for receiver invoices
+        receiver_invoices = session.query(Invoice).filter(
+            Invoice.warehouse_receiver_id == warehouse_id
+        )
 
-    # Combine the queries using union_all
-    all_invoices = (
-        sender_invoices.union_all(receiver_invoices).order_by(Invoice.created_at).all()
-    )
+        # Combine the queries using union_all
+        all_invoices = (
+            sender_invoices.union_all(receiver_invoices)
+            .order_by(Invoice.created_at)
+            .all()
+        )
+    except SQLAlchemyError as e:
+        current_app.logger.error(str(e.args))
+        session.rollback()
+        return msg_response("Something went wrong", False), 400
     return all_invoices

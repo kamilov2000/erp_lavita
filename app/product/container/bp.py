@@ -32,10 +32,15 @@ class ContainerAllView(MethodView):
         """List containers"""
         page = args.pop("page", 1)
         limit = args.pop("limit", 10)
-        query = Container.query.filter_by(**args)
-        total_count = query.count()
-        total_pages = (total_count + limit - 1) // limit
-        data = query.limit(limit).offset((page - 1) * limit).all()
+        try:
+            query = Container.query.filter_by(**args)
+            total_count = query.count()
+            total_pages = (total_count + limit - 1) // limit
+            data = query.limit(limit).offset((page - 1) * limit).all()
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         response = {
             "data": data,
             "pagination": {

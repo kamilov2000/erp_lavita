@@ -27,19 +27,24 @@ class InvoiceAllView(MethodView):
         """List transfers"""
         page = args.pop("page", 1)
         limit = args.pop("limit", 10)
-        query = Invoice.query.filter_by(type=InvoiceTypes.TRANSFER, **args)
-        total_count = query.count()
-        total_pages = (total_count + limit - 1) // limit
-        data = query.limit(limit).offset((page - 1) * limit).all()
-        response = {
-            "data": data,
-            "pagination": {
-                "page": page,
-                "limit": limit,
-                "total_pages": total_pages,
-                "total_count": total_count,
-            },
-        }
+        try:
+            query = Invoice.query.filter_by(type=InvoiceTypes.TRANSFER, **args)
+            total_count = query.count()
+            total_pages = (total_count + limit - 1) // limit
+            data = query.limit(limit).offset((page - 1) * limit).all()
+            response = {
+                "data": data,
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total_pages": total_pages,
+                    "total_count": total_count,
+                },
+            }
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
 
         return response
 
@@ -86,9 +91,14 @@ class InvoiceById(MethodView):
             item = Invoice.get_by_id(transfer_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        update_data.id = transfer_id
-        session.merge(update_data)
-        session.commit()
+        try:
+            update_data.id = transfer_id
+            session.merge(update_data)
+            session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return item
 
     @token_required

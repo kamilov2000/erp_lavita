@@ -32,10 +32,15 @@ class ProductAllView(MethodView):
         """List products"""
         page = args.pop("page", 1)
         limit = args.pop("limit", 10)
-        query = Product.query.filter_by(**args)
-        total_count = query.count()
-        total_pages = (total_count + limit - 1) // limit
-        data = query.limit(limit).offset((page - 1) * limit).all()
+        try:
+            query = Product.query.filter_by(**args)
+            total_count = query.count()
+            total_pages = (total_count + limit - 1) // limit
+            data = query.limit(limit).offset((page - 1) * limit).all()
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         response = {
             "data": data,
             "pagination": {
@@ -88,9 +93,14 @@ class ProductById(MethodView):
             item = Product.get_by_id(product_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        update_data.id = product_id
-        session.merge(update_data)
-        session.commit()
+        try:
+            update_data.id = product_id
+            session.merge(update_data)
+            session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return item
 
     @token_required

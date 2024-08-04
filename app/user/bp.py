@@ -31,7 +31,12 @@ user = Blueprint(
 def login_user(data):
     username = data.get("username")
     password = data.get("password")
-    user = session.execute(select(User).where(User.username == username)).scalar()
+    try:
+        user = session.execute(select(User).where(User.username == username)).scalar()
+    except SQLAlchemyError as e:
+        current_app.logger.error(str(e.args))
+        session.rollback()
+        return msg_response("Something went wrong", False), 400
     if not user:
         return msg_response("Login or password is incorrect", False), 400
     if not user.check_password(password):
@@ -94,8 +99,13 @@ class UserByIdView(MethodView):
             user = User.get_by_id(id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        UserSchema().load(update_data, session=session, instance=user)
-        session.commit()
+        try:
+            UserSchema().load(update_data, session=session, instance=user)
+            session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
         return user
 
 
@@ -105,21 +115,26 @@ class UserByIdView(MethodView):
 @user.arguments(TokenSchema, location="headers")
 @user.response(200, PagUserSchema)
 def get_users(c, args, token):
-    query = User.query
+    try:
+        query = User.query
 
-    if "username" in args:
-        query = query.filter(User.username.ilike(f"%{args['username']}%"))
-    if "first_name" in args:
-        query = query.filter(User.first_name.ilike(f"%{args['first_name']}%"))
-    if "last_name" in args:
-        query = query.filter(User.last_name.ilike(f"%{args['last_name']}%"))
-    if "role" in args:
-        query = query.filter(User.role.ilike(f"%{args['role']}%"))
-    page = args.pop("page", 1)
-    limit = args.pop("limit", 10)
-    total_count = query.count()
-    total_pages = (total_count + limit - 1) // limit
-    data = query.limit(limit).offset((page - 1) * limit).all()
+        if "username" in args:
+            query = query.filter(User.username.ilike(f"%{args['username']}%"))
+        if "first_name" in args:
+            query = query.filter(User.first_name.ilike(f"%{args['first_name']}%"))
+        if "last_name" in args:
+            query = query.filter(User.last_name.ilike(f"%{args['last_name']}%"))
+        if "role" in args:
+            query = query.filter(User.role.ilike(f"%{args['role']}%"))
+        page = args.pop("page", 1)
+        limit = args.pop("limit", 10)
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
+    except SQLAlchemyError as e:
+        current_app.logger.error(str(e.args))
+        session.rollback()
+        return msg_response("Something went wrong", False), 400
     response = {
         "data": data,
         "pagination": {

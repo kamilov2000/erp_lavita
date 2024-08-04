@@ -5,6 +5,7 @@ import os
 from flask import current_app, jsonify, request
 import jwt
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 
 from app.user.models import User
@@ -31,9 +32,14 @@ def token_required(f):
             data = jwt.decode(
                 token, current_app.config.get("SECRET_KEY"), algorithms=["HS256"]
             )
-            current_user = session.execute(
-                select(User).filter_by(id=data["public_id"])
-            ).scalar()
+            try:
+                current_user = session.execute(
+                    select(User).filter_by(id=data["public_id"])
+                ).scalar()
+            except SQLAlchemyError as e:
+                current_app.logger.error(str(e.args))
+                session.rollback()
+                return msg_response("Something went wrong", False), 400
         except Exception as E:
             return jsonify({"message": str(E)}), 401
         return f(
