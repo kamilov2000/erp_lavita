@@ -1,3 +1,5 @@
+from app.invoice.models import Invoice
+from app.invoice.schema import InvoiceHistorySchema
 from app.user.models import User
 from app.user.schema import UserSchema
 from app.utils.func import msg_response, token_required
@@ -110,10 +112,32 @@ class WarehouseById(MethodView):
 
 @warehouse.get("/<warehouse_id>/responsible_users/")
 @token_required
+@warehouse.arguments(TokenSchema, location="headers")
 @warehouse.response(200, UserSchema(many=True))
-def get_responsible_users(c, warehouse_id):
+def get_responsible_users(c, token, warehouse_id):
     try:
         item = Warehouse.get_by_id(warehouse_id)
     except ItemNotFoundError:
         abort(404, message="Warehouse not found.")
     return item.users
+
+
+@warehouse.get("/<warehouse_id>/history/")
+@token_required
+@warehouse.arguments(TokenSchema, location="headers")
+@warehouse.response(200, InvoiceHistorySchema(many=True))
+def get_history(c, token, warehouse_id):
+    sender_invoices = session.query(Invoice).filter(
+        Invoice.warehouse_sender_id == warehouse_id
+    )
+
+    # Query for receiver invoices
+    receiver_invoices = session.query(Invoice).filter(
+        Invoice.warehouse_receiver_id == warehouse_id
+    )
+
+    # Combine the queries using union_all
+    all_invoices = (
+        sender_invoices.union_all(receiver_invoices).order_by(Invoice.created_at).all()
+    )
+    return all_invoices

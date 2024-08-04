@@ -191,3 +191,20 @@ class PagExpenseSchema(ma.Schema):
 class PagProductionSchema(ma.Schema):
     data = ma.fields.Nested(ProductionSchema(many=True))
     pagination = ma.fields.Nested(PaginationSchema)
+
+
+class InvoiceHistorySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    class Meta:
+        model = Invoice
+        include_fk = True
+
+    user_id = auto_field(dump_only=True)
+    price = auto_field(dump_only=True)
+    quantity = auto_field(dump_only=True)
+    type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
+    status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
+    user_full_name = ma.fields.Method("get_user_full_name")
+
+    @staticmethod
+    def get_user_full_name(obj):
+        return obj.user.full_name if obj.user else None
