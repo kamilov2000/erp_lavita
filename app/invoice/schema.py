@@ -117,13 +117,13 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
         model = Invoice
         include_fk = True
         load_instance = True
-        exclude = ["warehouse_sender_id"]
+        exclude = ["warehouse_receiver_id"]
         sqla_session = session
 
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
-    warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
+    warehouse_sender_address = ma.fields.Method("get_warehouse_sender_address")
 
 
 class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
