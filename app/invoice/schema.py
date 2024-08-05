@@ -147,6 +147,7 @@ class InvoiceCommentSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         load_instance = True
         sqla_session = session
 
+    invoice_id = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
 
 
