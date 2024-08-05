@@ -81,7 +81,7 @@ class ContainerLot(Base, LotBase):
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
-    markup: Mapped[JSON] = mapped_column(JSON)
+    markup: Mapped[Optional[JSON]] = mapped_column(JSON)
     container_id: Mapped[int] = mapped_column(
         ForeignKey("container.id", ondelete="CASCADE")
     )
@@ -99,7 +99,7 @@ class PartLot(Base, LotBase):
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[float] = mapped_column(Float(decimal_return_scale=2))
     total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
-    markup: Mapped[JSON] = mapped_column(JSON)
+    markup: Mapped[Optional[JSON]] = mapped_column(JSON)
     part_id: Mapped[int] = mapped_column(ForeignKey("part.id", ondelete="CASCADE"))
     part: Mapped["Part"] = relationship()
     invoice_id: Mapped[int] = mapped_column(
