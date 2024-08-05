@@ -156,11 +156,11 @@ def reg_invoice_routes():
         ProductionSchema,
     ]
     for bp, label, schema in zip(bps, id_labels, schemas):
-        register_update_photos_route(bp, f"/<{label}>/update_photos/", schema)
-        register_add_comment_route(bp, f"/<{label}>/add_comment/")
-        register_publish_invoice_route(bp, f"/<{label}>/publish/")
-        register_get_logs_route(bp, f"/<{label}>/logs/")
-        register_get_comments_route(bp, f"/<{label}>/comments/")
+        register_update_photos_route(bp, f"/<invoice_id>/update_photos/", schema)
+        register_add_comment_route(bp, f"/<invoice_id>/add_comment/")
+        register_publish_invoice_route(bp, f"/<invoice_id>/publish/")
+        register_get_logs_route(bp, f"/<invoice_id>/logs/")
+        register_get_comments_route(bp, f"/<invoice_id>/comments/")
 
 
 reg_invoice_routes()
