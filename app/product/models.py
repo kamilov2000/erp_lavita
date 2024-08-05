@@ -27,7 +27,6 @@ class Product(Base):
     photo: Mapped[Optional[str]]
     description: Mapped[str]
     self_cost: Mapped[Optional[float]]
-    markup: Mapped[str]
     containers_r: Mapped[List["ProductContainer"]] = relationship(
         back_populates="product"
     )
@@ -44,7 +43,6 @@ class Container(Base):
     photo: Mapped[Optional[str]]
     description: Mapped[str]
     self_cost: Mapped[Optional[float]]
-    markup: Mapped[JSON] = mapped_column(JSON)
     parts_r: Mapped[List["ContainerPart"]] = relationship(back_populates="container")
 
 
@@ -56,7 +54,6 @@ class Part(Base):
     photo: Mapped[Optional[str]]
     description: Mapped[str]
     self_cost: Mapped[Optional[float]]
-    markup: Mapped[JSON] = mapped_column(JSON)
 
 
 class ProductLot(Base, LotBase):
@@ -66,6 +63,7 @@ class ProductLot(Base, LotBase):
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
+    markup: Mapped[Optional[str]]
     product_id: Mapped[int] = mapped_column(
         ForeignKey("product.id", ondelete="CASCADE")
     )
@@ -83,6 +81,7 @@ class ContainerLot(Base, LotBase):
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
+    markup: Mapped[JSON] = mapped_column(JSON)
     container_id: Mapped[int] = mapped_column(
         ForeignKey("container.id", ondelete="CASCADE")
     )
@@ -100,6 +99,7 @@ class PartLot(Base, LotBase):
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[float] = mapped_column(Float(decimal_return_scale=2))
     total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
+    markup: Mapped[JSON] = mapped_column(JSON)
     part_id: Mapped[int] = mapped_column(ForeignKey("part.id", ondelete="CASCADE"))
     part: Mapped["Part"] = relationship()
     invoice_id: Mapped[int] = mapped_column(

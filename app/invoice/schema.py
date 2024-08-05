@@ -1,3 +1,4 @@
+import uuid
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 import marshmallow as ma
 from app.base import session
@@ -31,6 +32,7 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     @ma.post_load
     def calc_price(self, data, **kwargs):
         data["total_sum"] = data.get("quantity") * data.get("price")
+        data["markup"] = str(uuid.uuid4())
         return data
 
 
@@ -164,6 +166,11 @@ class InvoiceLogSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     curr_status = ma.fields.Enum(InvoiceStatuses, by_value=True)
     prev_status = ma.fields.Enum(InvoiceStatuses, by_value=True)
+    user_full_name = ma.fields.Method("get_user_full_name")
+
+    @staticmethod
+    def get_user_full_name(obj):
+        return obj.user.full_name if obj.user else None
 
 
 class FileWebSchema(ma.Schema):
