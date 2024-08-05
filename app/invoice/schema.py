@@ -79,7 +79,6 @@ class PartLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class InvoiceQueryArgSchema(ma.Schema):
     page = ma.fields.Int(default=1)
     limit = ma.fields.Int(default=1)
-    type = ma.fields.Enum(InvoiceTypes, by_value=True, required=False)
     number = ma.fields.Str(required=False)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, required=False)
     warehouse_sender_id = ma.fields.Int(required=False)
