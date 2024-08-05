@@ -67,6 +67,7 @@ def register_add_comment_route(bp, route):
     def add_comment(cur_user, data, token, invoice_id):
         try:
             data.user_id = cur_user.id
+            data.invoice_id = invoice_id
             session.add(data)
             session.commit()
         except SQLAlchemyError as e:
