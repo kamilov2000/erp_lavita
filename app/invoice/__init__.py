@@ -110,8 +110,29 @@ def register_get_logs_route(bp, route):
     @bp.response(400, ResponseSchema)
     @bp.response(200, InvoiceLogSchema(many=True))
     def get_logs(cur_user, token, invoice_id):
-        invoice = Invoice.get_by_id(invoice_id)
-        return invoice.logs if invoice.logs else []
+        try:
+            invoice = Invoice.get_by_id(invoice_id)
+            return invoice.logs if invoice.logs else []
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
+
+
+def register_get_comments_route(bp, route):
+    @bp.get(route)
+    @token_required
+    @bp.arguments(TokenSchema, location="headers")
+    @bp.response(400, ResponseSchema)
+    @bp.response(200, InvoiceCommentSchema(many=True))
+    def get_comments(cur_user, token, invoice_id):
+        try:
+            invoice = Invoice.get_by_id(invoice_id)
+            return invoice.comments if invoice.comments else []
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
 
 
 def reg_invoice_routes():
@@ -138,6 +159,7 @@ def reg_invoice_routes():
         register_add_comment_route(bp, f"/<{label}>/add_comment/")
         register_publish_invoice_route(bp, f"/<{label}>/publish/")
         register_get_logs_route(bp, f"/<{label}>/logs/")
+        register_get_comments_route(bp, f"/<{label}>/comments/")
 
 
 reg_invoice_routes()
