@@ -148,6 +148,11 @@ class InvoiceCommentSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     invoice_id = auto_field(dump_only=True)
     user_id = auto_field(dump_only=True)
+    user_full_name = ma.fields.Method("get_user_full_name")
+
+    @staticmethod
+    def get_user_full_name(obj):
+        return obj.user.full_name if obj.user else None
 
 
 class InvoiceLogSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
