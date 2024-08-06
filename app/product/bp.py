@@ -1,10 +1,13 @@
 import os
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
-from app.product.models import Product
+from app.invoice.models import Invoice
+from app.invoice.schema import ProductUnitSchema
+from app.product.models import Product, ProductLot, ProductUnit
 from app.product.schema import (
     PagProductSchema,
     PhotoSchema,
@@ -15,6 +18,7 @@ from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
 from app.utils.schema import ResponseSchema, TokenSchema
+from app.warehouse.models import Warehouse
 
 
 product = Blueprint(
@@ -134,3 +138,34 @@ def change_photo(cur_user, photo, token, product_id):
     product.photo = path
     session.commit()
     return product
+
+
+@product.get("/<product_id>/markups/from_warehouse/<warehouse_id>/")
+@token_required
+@product.arguments(TokenSchema, location="headers")
+@product.response(400, ResponseSchema)
+@product.response(200, ProductUnitSchema(many=True))
+def get_product_units(cur_user, token, product_id, warehouse_id):
+    try:
+        Product.get_by_id(product_id)
+    except ItemNotFoundError:
+        return msg_response("Product not found", False), 400
+    try:
+        Warehouse.get_by_id(warehouse_id)
+    except ItemNotFoundError:
+        return msg_response("Product not found", False), 400
+    units = session.execute(
+        select(ProductUnit)
+        .join(
+            ProductLot,
+            (ProductUnit.product_lot_id == ProductLot.id)
+            & (ProductLot.product_id == product_id),
+        )
+        .join(
+            Invoice,
+            (Invoice.warehouse_receiver_id == warehouse_id)
+            & (Invoice.id == ProductLot.invoice_id),
+        )
+        .filter()
+    ).scalars()
+    return units

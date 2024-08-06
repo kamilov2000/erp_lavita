@@ -18,3 +18,8 @@ class InvoiceTypes(Enum):
     PRODUCTION = "production"
     EXPENSE = "expense"
     TRANSFER = "transfer"
+
+
+class DebtTypes(Enum):
+    CONTAINER = "container"
+    PART = "part"

@@ -1,4 +1,3 @@
-import uuid
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 import marshmallow as ma
 from app.base import session
@@ -10,8 +9,20 @@ from app.invoice.models import (
     InvoiceStatuses,
     InvoiceTypes,
 )
-from app.product.models import ContainerLot, PartLot, ProductLot
+from app.product.models import (
+    ContainerLot,
+    Part,
+    PartLot,
+    ProductLot,
+    ProductUnit,
+    Container,
+)
 from app.utils.schema import BaseInvoiceSchema, DefaultDumpsSchema, PaginationSchema
+
+
+class ProductUnitSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    class Meta:
+        model = ProductUnit
 
 
 class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -31,8 +42,10 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     @ma.post_load
     def calc_price(self, data, **kwargs):
-        data["total_sum"] = data.get("quantity") * data.get("price")
-        data["markup"] = str(uuid.uuid4())
+        quantity = data.get("quantity")
+        data["total_sum"] = quantity * data.get("price")
+        units_arr = [ProductUnit() for _ in range(quantity)]
+        data["units"] = units_arr
         return data
 
 
@@ -53,7 +66,10 @@ class ContainerLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     @ma.post_load
     def calc_price(self, data, **kwargs):
-        data["total_sum"] = data.get("quantity") * data.get("price")
+        quantity = data.get("quantity")
+        data["total_sum"] = quantity * data.get("price")
+        # units_arr = [ContainerUnit() for _ in range(quantity)]
+        # data["units"] = units_arr
         return data
 
 
@@ -74,7 +90,10 @@ class PartLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     @ma.post_load
     def calc_price(self, data, **kwargs):
-        data["total_sum"] = data.get("quantity") * data.get("price")
+        quantity = data.get("quantity")
+        data["total_sum"] = quantity * data.get("price")
+        # units_arr = [PartUnit() for _ in range(quantity)]
+        # data["units"] = units_arr
         return data
 
 
@@ -128,17 +147,69 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
     warehouse_sender_address = ma.fields.Method("get_warehouse_sender_address")
 
 
+class ProductUnitMoveSchema(ma.Schema):
+    id = ma.fields.Str()
+    with_container = ma.fields.Bool()
+
+
+class ContainerMoveSchema(ma.Schema):
+    container_id = ma.fields.Int()
+    quantity = ma.fields.Int()
+
+
+class PartMoveSchema(ma.Schema):
+    part_id = ma.fields.Int()
+    quantity = ma.fields.Int()
+
+
 class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
     class Meta:
         model = Invoice
         include_fk = True
         load_instance = True
+        sqla_session = session
 
-    product_lots = ma.fields.Nested(ProductLotSchema, many=True)
-    container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
-    part_lots = ma.fields.Nested(PartLotSchema, many=True)
+    product_unit_ids = ma.fields.Nested(
+        ProductUnitMoveSchema(many=True), required=False, load_only=True
+    )
+    container_ids = ma.fields.Nested(
+        ContainerMoveSchema(many=True), required=False, load_only=True
+    )
+    part_ids = ma.fields.Nested(
+        PartMoveSchema(many=True), required=False, load_only=True
+    )
     warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
     warehouse_sender_name = ma.fields.Method("get_warehouse_sender_address")
+
+    @ma.pre_load
+    def clear_products(self, data, **kwargs):
+        print(data)
+        print("ITS PRE LOAD")
+        product_unit_ids = data.pop("product_units", [])
+        units = ProductUnit.query.filter(ProductUnit.id.in_(product_unit_ids)).all()
+        if units:
+            lot = units[0].product_lot
+            data["product_lots"] = [
+                ProductLot(
+                    quantity=len(units),
+                    price=lot.price,
+                    product_id=lot.product_id,
+                    units=units,
+                )
+            ]
+        container_ids = data.pop("container_ids", [])
+        if container_ids:
+            for obj in container_ids:
+                Container.decrease(
+                    container_id=obj["container_id"], decrease_quantity=obj["quantity"]
+                )
+            data["container_lots"] = [ContainerLot(quantity=obj["quantity"], price)]
+        part_ids = data.pop("part_ids", [])
+        for obj in part_ids:
+            Part.decrease(
+                part_id=obj["container_id"], decrease_quantity=obj["quantity"]
+            )
+        return data
 
 
 class InvoiceCommentSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):

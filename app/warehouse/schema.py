@@ -200,3 +200,7 @@ class WarehouseQueryArgSchema(ma.Schema):
 class PagWarehouseSchema(ma.Schema):
     data = ma.fields.Nested(WarehouseSchema(many=True))
     pagination = ma.fields.Nested(PaginationSchema)
+
+
+class WarehouseQueryArgIDSchema(ma.Schema):
+    warehouse_id = ma.fields.Int()

@@ -38,7 +38,11 @@ class BaseInvoiceSchema:
 
     @ma.post_load
     def calc_price(self, data, **kwargs):
+        print("ITS POSt LOAD")
+        print(data)
         invoice = Invoice(**data)
+        if "product_lots" in data:
+            invoice.product_lots = data["product_lots"]
         data["price"] = (
             invoice.calc_container_lots_price()
             + invoice.calc_product_lots_price()
