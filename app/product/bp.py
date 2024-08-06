@@ -7,8 +7,9 @@ from flask_smorest import Blueprint, abort
 
 from app.invoice.models import Invoice
 from app.invoice.schema import ProductUnitSchema
-from app.product.models import Product, ProductLot, ProductUnit
+from app.product.models import Container, Part, Product, ProductLot, ProductUnit
 from app.product.schema import (
+    AllProductsStats,
     PagProductSchema,
     PhotoSchema,
     ProductQueryArgSchema,
@@ -169,3 +170,15 @@ def get_product_units(cur_user, token, product_id, warehouse_id):
         .filter()
     ).scalars()
     return units
+
+
+@product.get("/stats/")
+@token_required
+@product.arguments(TokenSchema, location="headers")
+@product.response(200, AllProductsStats)
+def all_product_stats(cur_user, token):
+    return {
+        "products": Product.query.all(),
+        "containers": Container.query.all(),
+        "parts": Part.query.all(),
+    }

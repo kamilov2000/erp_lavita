@@ -1,13 +1,18 @@
 import marshmallow as ma
-from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, SQLAlchemySchema, auto_field
+from sqlalchemy import func, select
 
-from app.choices import MeasumentTypes
+from app.choices import InvoiceTypes, MeasumentTypes
+from app.invoice.models import Invoice
 from app.product.models import (
     Container,
+    ContainerLot,
     ContainerPart,
     Part,
+    PartLot,
     Product,
     ProductContainer,
+    ProductLot,
     ProductPart,
 )
 from app.base import session
@@ -108,3 +113,118 @@ class PagContainerSchema(ma.Schema):
 class PagPartSchema(ma.Schema):
     data = ma.fields.Nested(PartSchema(many=True))
     pagination = ma.fields.Nested(PaginationSchema)
+
+
+class ProductStatSchema(SQLAlchemySchema):
+    class Meta:
+        model = Product
+
+    type = ma.fields.Constant("product")
+    measurement = ma.fields.Enum(MeasumentTypes, by_value=True)
+    photo = auto_field()
+    name = auto_field()
+    total_quantity = ma.fields.Method("get_product_total_quantity")
+    total_sum = ma.fields.Method("get_product_total_sum")
+
+    @staticmethod
+    def get_product_total_quantity(obj):
+        res = session.execute(
+            select(func.sum(ProductLot.quantity))
+            .join(Invoice, Invoice.id == ProductLot.invoice_id)
+            .where(
+                ProductLot.product_id == obj.id,
+                Invoice.type.in_([InvoiceTypes.TRANSFER, InvoiceTypes.PRODUCTION]),
+            )
+        ).scalar()
+        return res
+
+    @staticmethod
+    def get_product_total_sum(obj):
+        res = session.execute(
+            select(func.sum(ProductLot.price))
+            .join(Invoice, Invoice.id == ProductLot.invoice_id)
+            .where(
+                ProductLot.product_id == obj.id,
+                Invoice.type.in_([InvoiceTypes.TRANSFER, InvoiceTypes.PRODUCTION]),
+            )
+        ).scalar()
+        return res
+
+
+class ContainerStatSchema(SQLAlchemySchema):
+    class Meta:
+        model = Container
+
+    type = ma.fields.Constant("container")
+    measurement = ma.fields.Enum(MeasumentTypes, by_value=True)
+    photo = auto_field()
+    name = auto_field()
+    total_quantity = ma.fields.Method("get_container_total_quantity")
+    total_sum = ma.fields.Method("get_container_total_sum")
+
+    @staticmethod
+    def get_container_total_quantity(obj):
+        res = session.execute(
+            select(func.sum(ContainerLot.quantity))
+            .join(Invoice, Invoice.id == ContainerLot.invoice_id)
+            .where(
+                ContainerLot.container_id == obj.id,
+                Invoice.type != InvoiceTypes.EXPENSE,
+            )
+        ).scalar()
+        return res
+
+    @staticmethod
+    def get_container_total_sum(obj):
+        res = session.execute(
+            select(func.sum(ContainerLot.price))
+            .join(Invoice, Invoice.id == ContainerLot.invoice_id)
+            .where(
+                ContainerLot.container_id == obj.id,
+                Invoice.type != InvoiceTypes.EXPENSE,
+            )
+        ).scalar()
+        return res
+
+
+class PartStatSchema(SQLAlchemySchema):
+    class Meta:
+        model = Part
+
+    type = ma.fields.Constant("part")
+    measurement = ma.fields.Enum(MeasumentTypes, by_value=True)
+    photo = auto_field()
+    name = auto_field()
+    total_quantity = ma.fields.Method("get_part_total_quantity")
+    total_sum = ma.fields.Method("get_part_total_sum")
+
+    @staticmethod
+    def get_part_total_quantity(obj):
+        res = session.execute(
+            select(func.sum(PartLot.quantity))
+            .join(Invoice, Invoice.id == PartLot.invoice_id)
+            .where(
+                PartLot.part_id == obj.id,
+                Invoice.type.in_([InvoiceTypes.TRANSFER, InvoiceTypes.INVOICE]),
+            )
+        ).scalar()
+        print(res)
+        return res
+
+    @staticmethod
+    def get_part_total_sum(obj):
+        res = session.execute(
+            select(func.sum(PartLot.price))
+            .join(Invoice, Invoice.id == PartLot.invoice_id)
+            .where(
+                PartLot.part_id == obj.id,
+                Invoice.type.in_([InvoiceTypes.TRANSFER, InvoiceTypes.INVOICE]),
+            )
+        ).scalar()
+        return res
+
+
+class AllProductsStats(ma.Schema):
+    products = ma.fields.Nested(ProductStatSchema, many=True)
+    containers = ma.fields.Nested(ContainerStatSchema, many=True)
+    parts = ma.fields.Nested(PartStatSchema, many=True)
