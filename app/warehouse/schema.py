@@ -1,4 +1,4 @@
-from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, SQLAlchemySchema, auto_field
 import marshmallow as ma
 from sqlalchemy import func
 
@@ -204,3 +204,27 @@ class PagWarehouseSchema(ma.Schema):
 
 class WarehouseQueryArgIDSchema(ma.Schema):
     warehouse_id = ma.fields.Int()
+
+
+class WarehouseOneStatsSchema(SQLAlchemySchema):
+    class Meta:
+        model = Warehouse
+
+    name = auto_field()
+    address = auto_field()
+    capacity = ma.fields.Method("get_capacity")
+    total_price = ma.fields.Method("get_calc_total_price")
+
+    @staticmethod
+    def get_calc_total_price(obj):
+        return obj.calc_total_price()
+
+    @staticmethod
+    def get_capacity(obj):
+        return obj.calc_capacity()
+
+
+class WarehouseStatsSchema(ma.Schema):
+    total_capacity = ma.fields.Int()
+    total_price = ma.fields.Int()
+    warehouses = ma.fields.Nested(WarehouseOneStatsSchema, many=True)

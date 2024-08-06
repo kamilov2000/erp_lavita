@@ -1,3 +1,4 @@
+from sqlalchemy import select
 from app.invoice.models import Invoice
 from app.invoice.schema import PagWarehouseHistorySchema
 from app.user.models import User
@@ -15,6 +16,7 @@ from app.warehouse.schema import (
     WarehouseDetailSchema,
     WarehouseQueryArgSchema,
     WarehouseSchema,
+    WarehouseStatsSchema,
 )
 from app.base import session
 from app.utils.exc import ItemNotFoundError
@@ -167,3 +169,22 @@ def get_history(c, args, token, warehouse_id):
         },
     }
     return response
+
+
+@warehouse.get("/stats/")
+@token_required
+@warehouse.arguments(TokenSchema, location="headers")
+@warehouse.response(200, WarehouseStatsSchema)
+def get_stats(c, token):
+    warehouses = session.execute(select(Warehouse)).scalars()
+    total_capacity = 0
+    total_price = 0
+    for warehouse in warehouses:
+        total_capacity += warehouse.calc_capacity()
+        total_price += warehouse.calc_total_price()
+    res = {
+        "total_capacity": total_capacity,
+        "total_price": total_price,
+        "warehouses": warehouses,
+    }
+    return res

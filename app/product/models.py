@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class LotBase:
     def calc_total_sum(self):
         self.total_sum = self.quantity * self.price
-        session.commit()
+        return self.total_sum
 
 
 class Debt(Base):
@@ -54,25 +54,34 @@ class Container(Base):
     parts_r: Mapped[List["ContainerPart"]] = relationship(back_populates="container")
 
     @staticmethod
-    def decrease(container_id, decrease_quantity, possible_debt=False):
+    def decrease(container_id, decrease_quantity, transfer=False):
         if decrease_quantity <= 0:
             return
         lots = (
             ContainerLot.query.where(ContainerLot.container_id == container_id)
-            .order_by(ContainerLot.created_at.desc())
+            .order_by(ContainerLot.created_at.asc())
             .all()
         )
         res_lots = []
         for lot in lots:
             if lot.quantity >= decrease_quantity:
                 lot.quantity -= decrease_quantity
-                session.commit()
-                return [lot]
+                lot.calc_total_sum()
+                if transfer:
+                    new_lot = ContainerLot(
+                        quantity=decrease_quantity,
+                        price=lot.price,
+                        container_id=lot.container_id,
+                    )
+                    new_lot.calc_total_sum()
+                    return [new_lot]
             elif lot.quantity < decrease_quantity:
                 decrease_quantity -= lot.quantity
                 lot.quantity = 0
-                res_lots.append(lot)
-        if decrease_quantity > 0 and possible_debt:
+                lot.calc_total_sum()
+                if transfer:
+                    res_lots.append(lot)
+        if decrease_quantity > 0 and not transfer:
             debt = Debt(
                 quantity=decrease_quantity,
                 type=DebtTypes.CONTAINER,
@@ -81,7 +90,6 @@ class Container(Base):
             session.add(debt)
         else:
             raise NotAvailableQuantity("Quantity is more than expected")
-        session.commit()
         return res_lots
 
 
@@ -95,25 +103,34 @@ class Part(Base):
     self_cost: Mapped[Optional[float]]
 
     @staticmethod
-    def decrease(part_id, decrease_quantity, possible_debt=False):
+    def decrease(part_id, decrease_quantity, transfer=False):
         if decrease_quantity <= 0:
             return
         lots = (
-            PartLot.query.where(PartLot.container_id == part_id)
-            .order_by(PartLot.created_at.desc())
+            PartLot.query.where(PartLot.part_id == part_id)
+            .order_by(PartLot.created_at.asc())
             .all()
         )
         res_lots = []
         for lot in lots:
             if lot.quantity >= decrease_quantity:
+                lot.calc_total_sum()
                 lot.quantity -= decrease_quantity
-                session.commit()
-                return [lot]
+                if transfer:
+                    new_lot = PartLot(
+                        quantity=decrease_quantity,
+                        price=lot.price,
+                        part_id=lot.part_id,
+                    )
+                    new_lot.calc_total_sum()
+                    return [new_lot]
             elif lot.quantity < decrease_quantity:
                 decrease_quantity -= lot.quantity
                 lot.quantity = 0
-                res_lots.append(lot)
-        if decrease_quantity > 0 and possible_debt:
+                lot.calc_total_sum()
+                if transfer:
+                    res_lots.append(lot)
+        if decrease_quantity > 0 and not transfer:
             debt = Debt(
                 quantity=decrease_quantity,
                 type=DebtTypes.PART,
@@ -122,7 +139,6 @@ class Part(Base):
             session.add(debt)
         else:
             raise NotAvailableQuantity("Quantity is more than expected")
-        session.commit()
         return res_lots
 
 

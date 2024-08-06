@@ -1,3 +1,5 @@
+from collections import defaultdict
+from typing import List
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 import marshmallow as ma
 from app.base import session
@@ -107,6 +109,21 @@ class InvoiceQueryArgSchema(ma.Schema):
     user_id = ma.fields.Int(required=False)
 
 
+class ProductUnitMoveSchema(ma.Schema):
+    id = ma.fields.Str()
+    with_container = ma.fields.Bool()
+
+
+class ContainerMoveSchema(ma.Schema):
+    container_id = ma.fields.Int()
+    quantity = ma.fields.Int()
+
+
+class PartMoveSchema(ma.Schema):
+    part_id = ma.fields.Int()
+    quantity = ma.fields.Int()
+
+
 class InvoiceSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
     class Meta:
         model = Invoice
@@ -141,25 +158,70 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
         exclude = ["warehouse_receiver_id"]
         sqla_session = session
 
-    product_lots = ma.fields.Nested(ProductLotSchema, many=True)
-    container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
-    part_lots = ma.fields.Nested(PartLotSchema, many=True)
+    product_unit_ids = ma.fields.Nested(
+        ProductUnitMoveSchema(many=True), required=False, load_only=True
+    )
+    container_ids = ma.fields.Nested(
+        ContainerMoveSchema(many=True), required=False, load_only=True
+    )
+    part_ids = ma.fields.Nested(
+        PartMoveSchema(many=True), required=False, load_only=True
+    )
     warehouse_sender_address = ma.fields.Method("get_warehouse_sender_address")
 
+    @ma.pre_load
+    def clear_products(self, data, **kwargs):
+        quantity = 0
+        expense_price = 0
+        product_unit_ids = data.pop("product_unit_ids", [])
+        if product_unit_ids:
+            for obj in product_unit_ids:
+                unit: ProductUnit | None = ProductUnit.query.get(obj["id"])
+                if unit:
+                    old_lot = unit.product_lot
+                    old_lot.quantity -= 1
+                    expense_price += old_lot.product.self_cost
+                    old_lot.calc_total_sum()
+                    quantity += 1
+                    if obj["with_container"] is False:
+                        for container_r in old_lot.product.containers_r:
+                            c_lot = (
+                                ContainerLot.query.join(
+                                    Invoice, Invoice.id == ContainerLot.invoice_id
+                                )
+                                .filter(
+                                    ContainerLot.container_id
+                                    == container_r.container_id,
+                                    Invoice.warehouse_receiver_id
+                                    == data["warehouse_sender_id"],
+                                    Invoice.type != InvoiceTypes.EXPENSE,
+                                )
+                                .order_by(ContainerLot.created_at.desc())
+                                .first()
+                            )
+                            c_lot += container_r.quantity
 
-class ProductUnitMoveSchema(ma.Schema):
-    id = ma.fields.Str()
-    with_container = ma.fields.Bool()
-
-
-class ContainerMoveSchema(ma.Schema):
-    container_id = ma.fields.Int()
-    quantity = ma.fields.Int()
-
-
-class PartMoveSchema(ma.Schema):
-    part_id = ma.fields.Int()
-    quantity = ma.fields.Int()
+        # container SECTION
+        container_ids = data.pop("container_ids", [])
+        if container_ids:
+            for obj in container_ids:
+                Container.decrease(
+                    container_id=obj["container_id"],
+                    decrease_quantity=obj["quantity"],
+                    transfer=False,
+                )
+                quantity += obj["quantity"]
+        part_ids = data.pop("part_ids", [])
+        if part_ids:
+            for obj in part_ids:
+                Part.decrease(
+                    part_id=obj["part_id"],
+                    decrease_quantity=obj["quantity"],
+                    transfer=False,
+                )
+                quantity += obj["quantity"]
+        data["quantity"] = quantity
+        return data
 
 
 class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
@@ -183,32 +245,63 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
 
     @ma.pre_load
     def clear_products(self, data, **kwargs):
-        print(data)
-        print("ITS PRE LOAD")
         product_unit_ids = data.pop("product_units", [])
-        units = ProductUnit.query.filter(ProductUnit.id.in_(product_unit_ids)).all()
-        if units:
-            lot = units[0].product_lot
-            data["product_lots"] = [
-                ProductLot(
-                    quantity=len(units),
-                    price=lot.price,
-                    product_id=lot.product_id,
-                    units=units,
-                )
-            ]
+        units: List[ProductUnit] = ProductUnit.query.filter(
+            ProductUnit.id.in_(product_unit_ids)
+        ).all()
+        # Group units by product_id and price
+        grouped_units = defaultdict(list)
+        for unit in units:
+            key = (unit.product_lot.product_id, unit.product_lot.price)
+            grouped_units[key].append(unit)
+
+        new_lots = []
+        for (product_id, price), units in grouped_units.items():
+            # Calculate the total quantity for the new lot
+            total_quantity = sum(unit.product_lot.quantity for unit in units)
+
+            # Create a new ProductLot
+            new_lot = ProductLot(
+                quantity=total_quantity, price=price, product_id=product_id, units=units
+            )
+            new_lot.calc_total_sum()
+            new_lots.append(new_lot)
+
+            # Update units to reference the new lot
+            for unit in units:
+                old_lot = unit.product_lot
+                old_lot.quantity -= 1
+                old_lot.calc_total_sum()
+                unit.product_lot = new_lot
+        session.add_all(new_lots)
+
+        # container SECTION
         container_ids = data.pop("container_ids", [])
         if container_ids:
+            transferring_containers = []
             for obj in container_ids:
-                Container.decrease(
-                    container_id=obj["container_id"], decrease_quantity=obj["quantity"]
+                transferring_containers.extend(
+                    Container.decrease(
+                        container_id=obj["container_id"],
+                        decrease_quantity=obj["quantity"],
+                        transfer=True,
+                    )
                 )
-            data["container_lots"] = [ContainerLot(quantity=obj["quantity"], price)]
+            session.add_all(transferring_containers)
+            data["container_lots"] = transferring_containers
         part_ids = data.pop("part_ids", [])
-        for obj in part_ids:
-            Part.decrease(
-                part_id=obj["container_id"], decrease_quantity=obj["quantity"]
-            )
+        if part_ids:
+            transferring_parts = []
+            for obj in part_ids:
+                transferring_parts.extend(
+                    Part.decrease(
+                        part_id=obj["container_id"],
+                        decrease_quantity=obj["quantity"],
+                        transfer=True,
+                    )
+                )
+            session.add_all(transferring_parts)
+            data["part_lots"] = transferring_parts
         return data
 
 
