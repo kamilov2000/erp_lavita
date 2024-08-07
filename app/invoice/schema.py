@@ -2,6 +2,8 @@ from collections import defaultdict
 from typing import List
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 import marshmallow as ma
+from sqlalchemy.orm import joinedload
+
 from app.base import session
 from app.invoice.models import (
     File,
@@ -15,6 +17,7 @@ from app.product.models import (
     ContainerLot,
     Part,
     PartLot,
+    Product,
     ProductLot,
     ProductUnit,
     Container,
@@ -37,6 +40,7 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     invoice_id = auto_field(dump_only=True)
     total_sum = auto_field(dump_only=True)
+    price = auto_field(dump_only=True)
     product_name = ma.fields.Method("get_product_name")
     markups = ma.fields.List(ma.fields.Str())
 
@@ -47,7 +51,33 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     @ma.post_load
     def calc_price(self, data, **kwargs):
         quantity = data.get("quantity")
-        data["total_sum"] = quantity * data.get("price")
+        product_id = data.get("product_id")
+        product = (
+            session.query(Product)
+            .options(joinedload(Product.containers_r), joinedload(Product.parts_r))
+            .get(product_id)
+        )
+
+        total_cost = 0.0
+
+        # Calculate cost for containers
+        for product_container in product.containers_r:
+            required_quantity = product_container.quantity * quantity
+            cost = ContainerLot.calculate_fifo_cost(
+                product_container.container_id, required_quantity
+            )
+            total_cost += cost
+
+        # Calculate cost for parts
+        for product_part in product.parts_r:
+            required_quantity = product_part.quantity * quantity
+            cost = PartLot.calculate_fifo_cost(
+                product_part.part_id, required_quantity
+            )
+            total_cost += cost
+
+        data["price"] = total_cost / quantity if quantity else 0.0
+        data["total_sum"] = total_cost
         if len(data["markups"]) != quantity:
             raise NotRightQuantity("Not right quantity and markups list of array")
         units_arr = [ProductUnit(id=markup) for markup in data["markups"]]
