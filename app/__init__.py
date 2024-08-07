@@ -45,7 +45,7 @@ def create_app():
     @app.errorhandler(CustomError)
     def errorhandler_custom(error):
         app.logger.error("Handled CustomException: %s", error)
-        return jsonify({"ok": False, "data": None, "error": error.args[0]})
+        return jsonify({"ok": False, "data": None, "error": error.args[0]}), 400
 
     @app.get("/ping")
     def ping():
