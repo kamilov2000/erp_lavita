@@ -228,3 +228,7 @@ class AllProductsStats(ma.Schema):
     products = ma.fields.Nested(ProductStatSchema, many=True)
     containers = ma.fields.Nested(ContainerStatSchema, many=True)
     parts = ma.fields.Nested(PartStatSchema, many=True)
+
+
+class MarkupsArray(ma.Schema):
+    markups = ma.fields.List(ma.fields.Str())

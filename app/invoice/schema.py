@@ -65,7 +65,9 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         for product_container in product.containers_r:
             required_quantity = product_container.quantity * quantity
             cost = ContainerLot.calculate_fifo_cost(
-                product_container.container_id, required_quantity
+                ContainerLot.container_id == product_container.container_id,
+                required_quantity,
+                product_part.part_id
             )
             total_cost += cost
 
@@ -73,7 +75,7 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         for product_part in product.parts_r:
             required_quantity = product_part.quantity * quantity
             cost = PartLot.calculate_fifo_cost(
-                product_part.part_id, required_quantity
+                PartLot.part_id == product_part.part_id, required_quantity, product_part.part_id
             )
             total_cost += cost
 

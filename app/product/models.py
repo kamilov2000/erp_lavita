@@ -17,14 +17,14 @@ class LotBase:
         return self.total_sum
 
     @classmethod
-    def calculate_fifo_cost(LotModel, item_id, required_quantity):
+    def calculate_fifo_cost(LotModel, statement, required_quantity, item_id):
         total_cost = 0.0
         remaining_quantity = required_quantity
 
         # Query lots ordered by creation date (FIFO)
         lots = (
             session.query(LotModel)
-            .filter(LotModel.item_id == item_id)
+            .filter(statement)
             .order_by(LotModel.created_at)
             .all()
         )
@@ -39,11 +39,10 @@ class LotBase:
                 total_cost += lot.quantity * lot.price
                 remaining_quantity -= lot.quantity
                 lot.quantity = 0
-
         if remaining_quantity > 0:
-            raise NotAvailableQuantity(
-                f"Not enough items in lots for item_id: {item_id}"
-            )
+            model_name = str(LotModel.__tablename__).split("_")[0]
+            debt = Debt(type=DebtTypes(model_name), type_id=item_id, quantity=remaining_quantity)
+            session.add(debt)
 
         return total_cost
 

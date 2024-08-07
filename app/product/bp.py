@@ -10,6 +10,7 @@ from app.invoice.schema import ProductUnitSchema
 from app.product.models import Container, Part, Product, ProductLot, ProductUnit
 from app.product.schema import (
     AllProductsStats,
+    MarkupsArray,
     PagProductSchema,
     PhotoSchema,
     ProductQueryArgSchema,
@@ -182,3 +183,23 @@ def all_product_stats(cur_user, token):
         "containers": Container.query.all(),
         "parts": Part.query.all(),
     }
+
+
+@product.post("/check_markups/")
+@token_required
+@product.arguments(TokenSchema, location="headers")
+@product.arguments(MarkupsArray)
+@product.response(200, ResponseSchema)
+@product.response(400, ResponseSchema)
+def check_markup(c, token, data):
+    problem_markups = []
+    for markup in data["markups"]:
+        try:
+            ProductUnit.get_by_id(markup)
+            problem_markups.append(markup)
+        except ItemNotFoundError:
+            continue
+    # ok = true if no problem markups
+    ok = not bool(problem_markups)
+    response = {"ok": ok, "data": None, "error": problem_markups if not ok else None}
+    return response

@@ -12,3 +12,7 @@ class NotAvailableQuantity(CustomError):
 
 class NotRightQuantity(CustomError):
     pass
+
+
+class MarkupUniqueError(CustomError):
+    pass
