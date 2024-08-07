@@ -1,4 +1,3 @@
-import uuid
 from sqlalchemy import Float, ForeignKey, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -145,7 +144,7 @@ class Part(Base):
 class ProductUnit(Base):
     __tablename__ = "product_unit"
 
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    id: Mapped[str] = mapped_column(primary_key=True)
     product_lot_id: Mapped[int] = mapped_column(
         ForeignKey("product_lot.id", ondelete="CASCADE")
     )

@@ -1,8 +1,9 @@
 import logging
 import os
-from flask import Flask, request, make_response, send_from_directory
+from flask import Flask, jsonify, request, make_response, send_from_directory
 from flask_smorest import Api
 from app.init_db import init_db
+from app.utils.exc import CustomError
 
 
 def create_app():
@@ -40,6 +41,11 @@ def create_app():
                 response.headers.add("Access-Control-Allow-Origin", origin)
 
         return response
+
+    @app.errorhandler(CustomError)
+    def errorhandler_custom(error):
+        app.logger.error("Handled CustomException: %s", error)
+        return jsonify({"ok": False, "data": None, "error": error.args[0]})
 
     @app.get("/ping")
     def ping():

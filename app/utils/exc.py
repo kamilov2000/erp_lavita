@@ -1,6 +1,14 @@
-class ItemNotFoundError(Exception):
+class CustomError(Exception):
     pass
 
 
-class NotAvailableQuantity(Exception):
+class ItemNotFoundError(CustomError):
+    pass
+
+
+class NotAvailableQuantity(CustomError):
+    pass
+
+
+class NotRightQuantity(CustomError):
     pass

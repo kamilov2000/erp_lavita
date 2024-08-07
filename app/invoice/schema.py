@@ -19,6 +19,7 @@ from app.product.models import (
     ProductUnit,
     Container,
 )
+from app.utils.exc import NotRightQuantity
 from app.utils.schema import BaseInvoiceSchema, DefaultDumpsSchema, PaginationSchema
 
 
@@ -37,6 +38,7 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     invoice_id = auto_field(dump_only=True)
     total_sum = auto_field(dump_only=True)
     product_name = ma.fields.Method("get_product_name")
+    markups = ma.fields.List(ma.fields.Str())
 
     @staticmethod
     def get_product_name(obj):
@@ -46,7 +48,9 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     def calc_price(self, data, **kwargs):
         quantity = data.get("quantity")
         data["total_sum"] = quantity * data.get("price")
-        units_arr = [ProductUnit() for _ in range(quantity)]
+        if len(data["markups"]) != quantity:
+            raise NotRightQuantity("Not right quantity and markups list of array")
+        units_arr = [ProductUnit(id=markup) for markup in data["markups"]]
         data["units"] = units_arr
         return data
 
