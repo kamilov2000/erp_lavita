@@ -22,7 +22,7 @@ from app.product.models import (
     ProductUnit,
     Container,
 )
-from app.utils.exc import NotRightQuantity
+from app.utils.exc import ItemNotFoundError, NotRightQuantity
 from app.utils.schema import BaseInvoiceSchema, DefaultDumpsSchema, PaginationSchema
 
 
@@ -57,7 +57,8 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .options(joinedload(Product.containers_r), joinedload(Product.parts_r))
             .get(product_id)
         )
-
+        if not product:
+            raise ItemNotFoundError("Product not found")
         total_cost = 0.0
 
         # Calculate cost for containers
