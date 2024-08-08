@@ -176,7 +176,7 @@ def get_history(c, args, token, warehouse_id):
 @warehouse.arguments(TokenSchema, location="headers")
 @warehouse.response(200, WarehouseStatsSchema)
 def get_stats(c, token):
-    warehouses = session.execute(select(Warehouse)).scalars()
+    warehouses = session.execute(select(Warehouse)).scalars().all()
     total_capacity = 0
     total_price = 0
     for warehouse in warehouses:
