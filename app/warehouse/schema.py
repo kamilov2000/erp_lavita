@@ -118,11 +118,10 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             session.query(
                 Product.name,
                 func.sum(ProductLot.quantity),
-                func.max(ContainerLot.updated_at),
+                func.max(ProductLot.updated_at),
             )
-            .join(ProductLot)
-            .join(Invoice)
-            .filter(Invoice.warehouse_receiver_id == obj.id)
+            .join(ProductLot, ProductLot.product_id == Product.id)
+            .join(Invoice, Invoice.warehouse_receiver_id == obj.id)
             .group_by(Product.name)
             .all()
         )
@@ -166,11 +165,12 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         res = []
         part_info = (
             session.query(
-                Part.name, func.sum(PartLot.quantity), func.max(ContainerLot.updated_at)
+                Part.name,
+                func.sum(PartLot.quantity),
+                func.max(PartLot.updated_at),
             )
-            .join(PartLot)
-            .join(Invoice)
-            .filter(Invoice.warehouse_receiver_id == obj.id)
+            .join(PartLot, PartLot.part_id == Part.id)
+            .join(Invoice, Invoice.warehouse_receiver_id == obj.id)
             .group_by(Part.name)
             .all()
         )
