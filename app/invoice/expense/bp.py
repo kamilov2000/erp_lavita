@@ -40,7 +40,10 @@ class InvoiceAllView(MethodView):
         if limit <= 0:
             limit = 10
         try:
+            number = args.pop("number", None)
             query = Invoice.query.filter_by(type=InvoiceTypes.EXPENSE, **args)
+            if number:
+                query = query.filter(Invoice.number.ilike(f"%{number}%"))
             total_count = query.count()
             total_pages = (total_count + limit - 1) // limit
             data = query.limit(limit).offset((page - 1) * limit).all()
