@@ -38,7 +38,14 @@ class WarehouseAllView(MethodView):
         """List warehouses"""
         user_ids = args.pop("user_ids", None)
         page = args.pop("page", 1)
-        limit = args.pop("limit", 10)
+        try:
+            limit = int(args.pop("limit", 10))
+            if limit <= 0:
+                limit = 10
+        except ValueError:
+            limit = 10
+        if limit <= 0:
+            limit = 10
         try:
             query = Warehouse.query.filter_by(**args)
             if user_ids:
@@ -137,7 +144,12 @@ def get_responsible_users(c, token, warehouse_id):
 @warehouse.response(200, PagWarehouseHistorySchema)
 def get_history(c, args, token, warehouse_id):
     page = args.pop("page", 1)
-    limit = args.pop("limit", 10)
+    try:
+        limit = int(args.pop("limit", 10))
+        if limit <= 0:
+            limit = 10
+    except ValueError:
+        limit = 10
     try:
         sender_invoices = session.query(Invoice).filter(
             Invoice.warehouse_sender_id == warehouse_id

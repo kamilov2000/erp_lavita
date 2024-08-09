@@ -37,7 +37,14 @@ class ProductAllView(MethodView):
     def get(c, self, args, token):
         """List products"""
         page = args.pop("page", 1)
-        limit = args.pop("limit", 10)
+        try:
+            limit = int(args.pop("limit", 10))
+            if limit <= 0:
+                limit = 10
+        except ValueError:
+            limit = 10
+        if limit <= 0:
+            limit = 10
         try:
             query = Product.query.filter_by(**args)
             total_count = query.count()

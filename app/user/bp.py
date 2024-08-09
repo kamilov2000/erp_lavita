@@ -127,7 +127,14 @@ def get_users(c, args, token):
         if "role" in args:
             query = query.filter(User.role.ilike(f"%{args['role']}%"))
         page = args.pop("page", 1)
-        limit = args.pop("limit", 10)
+        try:
+            limit = int(args.pop("limit", 10))
+            if limit <= 0:
+                limit = 10
+        except ValueError:
+            limit = 10
+        if limit <= 0:
+            limit = 10
         total_count = query.count()
         total_pages = (total_count + limit - 1) // limit
         data = query.limit(limit).offset((page - 1) * limit).all()

@@ -41,7 +41,9 @@ class LotBase:
                 lot.quantity = 0
         if remaining_quantity > 0:
             model_name = str(LotModel.__tablename__).split("_")[0]
-            debt = Debt(type=DebtTypes(model_name), type_id=item_id, quantity=remaining_quantity)
+            debt = Debt(
+                type=DebtTypes(model_name), type_id=item_id, quantity=remaining_quantity
+            )
             session.add(debt)
 
         return total_cost
