@@ -1,4 +1,6 @@
+from sqlalchemy import select
 from app.choices import InvoiceTypes
+from app.product.models import ProductLot, ProductUnit
 from app.utils.func import msg_response, token_required
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
@@ -9,6 +11,7 @@ from app.invoice.models import Invoice
 from app.invoice.schema import (
     InvoiceQueryArgSchema,
     PagProductionSchema,
+    ProductUnitSchema,
     ProductionSchema,
 )
 from app.base import session
@@ -117,3 +120,19 @@ class InvoiceById(MethodView):
             Invoice.delete(production_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
+
+
+@production.get("/<production_id>/markups_of_product/<product_id>/")
+@token_required
+@production.arguments(TokenSchema, location="headers")
+@production.response(200, ProductUnitSchema(many=True))
+def get_markups_of_product(c, token, production_id, product_id):
+    production = Invoice.get_by_id(production_id)
+    if production.type != InvoiceTypes.PRODUCTION:
+        raise ItemNotFoundError(f"Not found Production with id: {production_id}")
+    res = session.execute(
+        select(ProductUnit)
+        .join(ProductLot, ProductLot.id == ProductUnit.product_lot_id)
+        .where(ProductLot.product_id == product_id)
+    ).scalars()
+    return res

@@ -96,7 +96,7 @@ class Base(DeclarativeBase):
     def get_by_id(cls, ident):
         res = cls.query.get(ident)
         if not res:
-            raise ItemNotFoundError(f"not found {cls.__tablename__} with id: {ident}")
+            raise ItemNotFoundError(f"Not found {cls.__tablename__} with id: {ident}")
         return res
 
     @classmethod
