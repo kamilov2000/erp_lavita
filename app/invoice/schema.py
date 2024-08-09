@@ -67,7 +67,7 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             cost = ContainerLot.calculate_fifo_cost(
                 ContainerLot.container_id == product_container.container_id,
                 required_quantity,
-                product_container.container_id
+                product_container.container_id,
             )
             total_cost += cost
 
@@ -75,7 +75,9 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         for product_part in product.parts_r:
             required_quantity = product_part.quantity * quantity
             cost = PartLot.calculate_fifo_cost(
-                PartLot.part_id == product_part.part_id, required_quantity, product_part.part_id
+                PartLot.part_id == product_part.part_id,
+                required_quantity,
+                product_part.part_id,
             )
             total_cost += cost
 
@@ -147,7 +149,7 @@ class InvoiceQueryArgSchema(ma.Schema):
 
 
 class ProductUnitMoveSchema(ma.Schema):
-    id = ma.fields.Str()
+    markup = ma.fields.Str()
     with_container = ma.fields.Bool()
 
 
@@ -195,7 +197,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
         exclude = ["warehouse_receiver_id"]
         sqla_session = session
 
-    product_unit_ids = ma.fields.Nested(
+    product_unit_markups = ma.fields.Nested(
         ProductUnitMoveSchema(many=True), required=False, load_only=True
     )
     container_ids = ma.fields.Nested(
@@ -210,10 +212,10 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
     def clear_products(self, data, **kwargs):
         quantity = 0
         expense_price = 0
-        product_unit_ids = data.pop("product_unit_ids", [])
-        if product_unit_ids:
-            for obj in product_unit_ids:
-                unit: ProductUnit | None = ProductUnit.query.get(obj["id"])
+        product_unit_markups = data.pop("product_unit_markups", [])
+        if product_unit_markups:
+            for obj in product_unit_markups:
+                unit: ProductUnit | None = ProductUnit.query.get(obj["markup"])
                 if unit:
                     old_lot = unit.product_lot
                     old_lot.quantity -= 1
@@ -269,8 +271,8 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
         sqla_session = session
         unknown = ma.INCLUDE  # Add this line to exclude unknown fields
 
-    product_unit_ids = ma.fields.Nested(
-        ProductUnitMoveSchema(many=True), required=False, load_only=True
+    product_unit_markups = ma.fields.List(
+        ma.fields.Str(), required=False, load_only=True
     )
     container_ids = ma.fields.Nested(
         ContainerMoveSchema(many=True), required=False, load_only=True
@@ -286,9 +288,9 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
 
     @ma.pre_load
     def clear_products(self, data, **kwargs):
-        product_unit_ids = data.pop("product_units", [])
+        product_unit_markups = data.pop("product_unit_markups", [])
         units: List[ProductUnit] = ProductUnit.query.filter(
-            ProductUnit.id.in_(product_unit_ids)
+            ProductUnit.id.in_(product_unit_markups)
         ).all()
         # Group units by product_id and price
         grouped_units = defaultdict(list)
