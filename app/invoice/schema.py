@@ -144,7 +144,7 @@ class InvoiceQueryArgSchema(ma.Schema):
     user_id = ma.fields.Int(required=False)
 
 
-class ProductUnitMoveSchema(ma.Schema):
+class ProductUnitMoveWebSchema(ma.Schema):
     markup = ma.fields.Str()
     with_container = ma.fields.Bool()
 
@@ -194,7 +194,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
         sqla_session = session
 
     product_unit_markups = ma.fields.Nested(
-        ProductUnitMoveSchema(many=True), required=False, load_only=True
+        ProductUnitMoveWebSchema(many=True), required=False, load_only=True
     )
     container_ids = ma.fields.Nested(
         ContainerMoveSchema(many=True), required=False, load_only=True
@@ -450,9 +450,13 @@ class InvoiceDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceS
                     "name": product_name,
                     "quantity": 0,
                     "total_sum": 0.0,
+                    "markups": [],
                 }
             products[product_name]["quantity"] += lot.quantity
             products[product_name]["total_sum"] += lot.total_sum or 0.0
+            products[product_name]["markups"].extend(
+                ProductUnitSchema().dump(lot.units, many=True)
+            )
         return list(products.values())
 
     def get_containers(self, obj):
