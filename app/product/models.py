@@ -100,7 +100,7 @@ class Container(Base):
                     new_lot = ContainerLot(
                         quantity=decrease_quantity,
                         price=lot.price,
-                        container_id=lot.container_id,
+                        container_id=container_id,
                     )
                     new_lot.calc_total_sum()
                     return [new_lot]
@@ -155,10 +155,11 @@ class Part(Base):
                     return [new_lot]
             elif lot.quantity < decrease_quantity:
                 decrease_quantity -= lot.quantity
-                lot.quantity = 0
-                lot.calc_total_sum()
                 if transfer:
                     res_lots.append(lot)
+                    continue
+                lot.quantity = 0
+                lot.calc_total_sum()
         if decrease_quantity > 0 and not transfer:
             debt = Debt(
                 quantity=decrease_quantity,

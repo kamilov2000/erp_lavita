@@ -1,3 +1,4 @@
+from flask import current_app
 import marshmallow as ma
 from marshmallow_sqlalchemy import auto_field
 
@@ -39,7 +40,8 @@ class BaseInvoiceSchema:
     @ma.post_load
     def calc_price(self, data, **kwargs):
         print("ITS POSt LOAD")
-        print(data)
+        current_app.logger.error(data)
+        data.pop("product_unit_ids", [])
         invoice = Invoice(**data)
         if "product_lots" in data:
             invoice.product_lots = data["product_lots"]

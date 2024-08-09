@@ -67,7 +67,7 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             cost = ContainerLot.calculate_fifo_cost(
                 ContainerLot.container_id == product_container.container_id,
                 required_quantity,
-                product_part.part_id
+                product_container.container_id
             )
             total_cost += cost
 
@@ -267,6 +267,7 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
         include_fk = True
         load_instance = True
         sqla_session = session
+        unknown = ma.INCLUDE  # Add this line to exclude unknown fields
 
     product_unit_ids = ma.fields.Nested(
         ProductUnitMoveSchema(many=True), required=False, load_only=True
@@ -277,6 +278,9 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
     part_ids = ma.fields.Nested(
         PartMoveSchema(many=True), required=False, load_only=True
     )
+    # container_lots = ma.fields.Raw(dump_only=True, required=False)  # Add this line
+    # part_lots = ma.fields.Raw(dump_only=True, required=False)  # Add this line
+
     warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
     warehouse_sender_name = ma.fields.Method("get_warehouse_sender_address")
 
@@ -324,7 +328,6 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
                         transfer=True,
                     )
                 )
-            session.add_all(transferring_containers)
             data["container_lots"] = transferring_containers
         part_ids = data.pop("part_ids", [])
         if part_ids:
@@ -332,12 +335,11 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
             for obj in part_ids:
                 transferring_parts.extend(
                     Part.decrease(
-                        part_id=obj["container_id"],
+                        part_id=obj["part_id"],
                         decrease_quantity=obj["quantity"],
                         transfer=True,
                     )
                 )
-            session.add_all(transferring_parts)
             data["part_lots"] = transferring_parts
         return data
 

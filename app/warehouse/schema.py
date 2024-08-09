@@ -116,18 +116,20 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         res = []
         product_info = (
             session.query(
+                Product.id,
                 Product.name,
                 func.sum(ProductLot.quantity),
                 func.max(ProductLot.updated_at),
             )
             .join(ProductLot, ProductLot.product_id == Product.id)
             .join(Invoice, Invoice.warehouse_receiver_id == obj.id)
-            .group_by(Product.name)
+            .group_by(Product.id, Product.name)
             .all()
         )
-        for name, quantity, updated_at in product_info:
+        for id, name, quantity, updated_at in product_info:
             res.append(
                 {
+                    "id": id,
                     "name": name,
                     "quantity": quantity,
                     "updated_at": updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f"),
@@ -140,6 +142,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         res = []
         container_info = (
             session.query(
+                Container.id,
                 Container.name,
                 func.sum(ContainerLot.quantity),
                 func.max(ContainerLot.updated_at),
@@ -147,12 +150,13 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .join(ContainerLot)
             .join(Invoice)
             .filter(Invoice.warehouse_receiver_id == obj.id)
-            .group_by(Container.name)
+            .group_by(Container.id, Container.name)
             .all()
         )
-        for name, quantity, updated_at in container_info:
+        for id, name, quantity, updated_at in container_info:
             res.append(
                 {
+                    "id": id,
                     "name": name,
                     "quantity": quantity,
                     "updated_at": updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f"),
@@ -165,18 +169,20 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         res = []
         part_info = (
             session.query(
+                Part.id,
                 Part.name,
                 func.sum(PartLot.quantity),
                 func.max(PartLot.updated_at),
             )
             .join(PartLot, PartLot.part_id == Part.id)
             .join(Invoice, Invoice.warehouse_receiver_id == obj.id)
-            .group_by(Part.name)
+            .group_by(Part.id, Part.name)
             .all()
         )
-        for name, quantity, updated_at in part_info:
+        for id, name, quantity, updated_at in part_info:
             res.append(
                 {
+                    "id": id,
                     "name": name,
                     "quantity": quantity,
                     "updated_at": updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f"),

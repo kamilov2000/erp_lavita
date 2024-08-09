@@ -84,7 +84,14 @@ def register_publish_invoice_route(bp, route):
     @bp.response(400, ResponseSchema)
     @bp.response(200, ResponseSchema)
     def publish_invoice(cur_user, token, invoice_id):
-        invoice = Invoice.get_by_id(invoice_id)
+        try:
+            invoice = Invoice.get_by_id(invoice_id)
+        except ItemNotFoundError:
+            return {
+                "ok": False,
+                "error": f"Not found by this id {invoice_id}",
+                "data": None
+            }
         if invoice.status != InvoiceStatuses.DRAFT:
             return msg_response("Invoice should be in draft status to publish")
         invoice.status = InvoiceStatuses.PUBLISHED
