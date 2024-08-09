@@ -1,4 +1,4 @@
-from app.choices import InvoiceTypes
+from app.choices import InvoiceStatuses, InvoiceTypes
 from app.utils.func import msg_response, token_required
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
@@ -6,7 +6,12 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
 from app.invoice.models import Invoice
-from app.invoice.schema import InvoiceQueryArgSchema, PagTransferSchema, TransferSchema
+from app.invoice.schema import (
+    InvoiceDetailSchema,
+    InvoiceQueryArgSchema,
+    PagTransferSchema,
+    TransferSchema,
+)
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.schema import ResponseSchema, TokenSchema
@@ -61,8 +66,9 @@ class InvoiceAllView(MethodView):
     @transfer.response(400, ResponseSchema)
     @transfer.response(201, TransferSchema)
     def post(c, self, new_data, token):
-        """Add a new transfer"""
+        """Add a new published transfer"""
         try:
+            new_data.status = InvoiceStatuses.PUBLISHED
             new_data.type = InvoiceTypes.TRANSFER
             new_data.user_id = c.id
             session.add(new_data)
@@ -79,7 +85,7 @@ class InvoiceAllView(MethodView):
 class InvoiceById(MethodView):
     @token_required
     @transfer.arguments(TokenSchema, location="headers")
-    @transfer.response(200, TransferSchema)
+    @transfer.response(200, InvoiceDetailSchema)
     def get(c, self, token, transfer_id):
         """Get transfer by ID"""
         try:

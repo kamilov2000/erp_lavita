@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from app.choices import InvoiceTypes
+from app.choices import InvoiceStatuses, InvoiceTypes
 from app.product.models import ProductLot, ProductUnit
 from app.utils.func import msg_response, token_required
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,6 +9,7 @@ from flask_smorest import Blueprint, abort
 
 from app.invoice.models import Invoice
 from app.invoice.schema import (
+    InvoiceDetailSchema,
     InvoiceQueryArgSchema,
     PagProductionSchema,
     ProductUnitSchema,
@@ -71,8 +72,9 @@ class InvoiceAllView(MethodView):
     @production.response(400, ResponseSchema)
     @production.response(201, ProductionSchema)
     def post(c, self, new_data, token):
-        """Add a new production"""
+        """Add a new published production"""
         try:
+            new_data.status = InvoiceStatuses.PUBLISHED
             new_data.type = InvoiceTypes.PRODUCTION
             new_data.user_id = c.id
             session.add(new_data)
@@ -89,7 +91,7 @@ class InvoiceAllView(MethodView):
 class InvoiceById(MethodView):
     @token_required
     @production.arguments(TokenSchema, location="headers")
-    @production.response(200, ProductionSchema)
+    @production.response(200, InvoiceDetailSchema)
     def get(c, self, token, production_id):
         """Get production by ID"""
         try:

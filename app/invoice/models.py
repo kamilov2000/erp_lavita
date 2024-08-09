@@ -24,41 +24,7 @@ class File(Base):
     is_photo: Mapped[bool] = mapped_column(default=False)
 
 
-class Invoice(Base):
-    __tablename__ = "invoice"
-
-    type: Mapped[enum.Enum] = mapped_column(
-        Enum(InvoiceTypes), default=InvoiceTypes.INVOICE
-    )
-    number: Mapped[str]
-    status: Mapped[enum.Enum] = mapped_column(
-        Enum(InvoiceStatuses), default=InvoiceStatuses.DRAFT
-    )
-    warehouse_sender_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("warehouse.id", ondelete="SET NULL")
-    )
-    warehouse_sender: Mapped["Warehouse"] = relationship(
-        foreign_keys=[warehouse_sender_id], back_populates="invoice_senders"
-    )
-    warehouse_receiver_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("warehouse.id", ondelete="SET NULL")
-    )
-    warehouse_receiver: Mapped["Warehouse"] = relationship(
-        foreign_keys=[warehouse_receiver_id], back_populates="invoice_receivers"
-    )
-    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="SET NULL"))
-    user: Mapped["User"] = relationship(back_populates="invoices")
-    files: Mapped[List["File"]] = relationship(back_populates="invoice")
-    price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
-    quantity: Mapped[Optional[int]]
-    comments: Mapped[List["InvoiceComment"]] = relationship(back_populates="invoice")
-    logs: Mapped[List["InvoiceLog"]] = relationship(back_populates="invoice")
-    product_lots: Mapped[List["ProductLot"]] = relationship(back_populates="invoice")
-    container_lots: Mapped[List["ContainerLot"]] = relationship(
-        back_populates="invoice"
-    )
-    part_lots: Mapped[List["PartLot"]] = relationship(back_populates="invoice")
-
+class InvoiceBase:
     def calc_container_lots_price(self):
         if self.container_lots:
             return sum([i.price * i.quantity for i in self.container_lots])
@@ -107,6 +73,42 @@ class Invoice(Base):
 
     def get_parts(self):
         return [item.part for item in self.part_lots]
+
+
+class Invoice(Base, InvoiceBase):
+    __tablename__ = "invoice"
+
+    type: Mapped[enum.Enum] = mapped_column(
+        Enum(InvoiceTypes), default=InvoiceTypes.INVOICE
+    )
+    number: Mapped[str]
+    status: Mapped[enum.Enum] = mapped_column(
+        Enum(InvoiceStatuses), default=InvoiceStatuses.DRAFT
+    )
+    warehouse_sender_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("warehouse.id", ondelete="SET NULL")
+    )
+    warehouse_sender: Mapped["Warehouse"] = relationship(
+        foreign_keys=[warehouse_sender_id], back_populates="invoice_senders"
+    )
+    warehouse_receiver_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("warehouse.id", ondelete="SET NULL")
+    )
+    warehouse_receiver: Mapped["Warehouse"] = relationship(
+        foreign_keys=[warehouse_receiver_id], back_populates="invoice_receivers"
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="SET NULL"))
+    user: Mapped["User"] = relationship(back_populates="invoices")
+    files: Mapped[List["File"]] = relationship(back_populates="invoice")
+    price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
+    quantity: Mapped[Optional[int]]
+    comments: Mapped[List["InvoiceComment"]] = relationship(back_populates="invoice")
+    logs: Mapped[List["InvoiceLog"]] = relationship(back_populates="invoice")
+    product_lots: Mapped[List["ProductLot"]] = relationship(back_populates="invoice")
+    container_lots: Mapped[List["ContainerLot"]] = relationship(
+        back_populates="invoice"
+    )
+    part_lots: Mapped[List["PartLot"]] = relationship(back_populates="invoice")
 
 
 class InvoiceComment(Base):

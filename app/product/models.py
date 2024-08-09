@@ -17,14 +17,20 @@ class LotBase:
         return self.total_sum
 
     @classmethod
-    def calculate_fifo_cost(LotModel, statement, required_quantity, item_id):
+    def calculate_fifo_cost(
+        LotModel,
+        statement,
+        required_quantity,
+        item_id,
+        expense=True,
+    ):
         total_cost = 0.0
         remaining_quantity = required_quantity
 
         # Query lots ordered by creation date (FIFO)
         lots = (
             session.query(LotModel)
-            .filter(statement)
+            .filter(statement, LotModel.quantity > 0)
             .order_by(LotModel.created_at)
             .all()
         )
@@ -32,14 +38,16 @@ class LotBase:
         for lot in lots:
             if lot.quantity >= remaining_quantity:
                 total_cost += remaining_quantity * lot.price
-                lot.quantity -= remaining_quantity
+                if expense:
+                    lot.quantity -= remaining_quantity
                 remaining_quantity = 0
                 break
             else:
                 total_cost += lot.quantity * lot.price
                 remaining_quantity -= lot.quantity
-                lot.quantity = 0
-        if remaining_quantity > 0:
+                if expense:
+                    lot.quantity = 0
+        if remaining_quantity > 0 and expense:
             model_name = str(LotModel.__tablename__).split("_")[0]
             debt = Debt(
                 type=DebtTypes(model_name), type_id=item_id, quantity=remaining_quantity
@@ -65,7 +73,6 @@ class Product(Base):
     )
     photo: Mapped[Optional[str]]
     description: Mapped[str]
-    self_cost: Mapped[Optional[float]]
     containers_r: Mapped[List["ProductContainer"]] = relationship(
         back_populates="product"
     )
@@ -81,7 +88,6 @@ class Container(Base):
     )
     photo: Mapped[Optional[str]]
     description: Mapped[str]
-    self_cost: Mapped[Optional[float]]
     parts_r: Mapped[List["ContainerPart"]] = relationship(back_populates="container")
 
     @staticmethod
@@ -131,7 +137,6 @@ class Part(Base):
     measurement: Mapped[enum.Enum] = mapped_column(Enum(MeasumentTypes))
     photo: Mapped[Optional[str]]
     description: Mapped[str]
-    self_cost: Mapped[Optional[float]]
 
     @staticmethod
     def decrease(part_id, decrease_quantity, transfer=False):
@@ -184,26 +189,6 @@ class ProductUnit(Base):
     product_lot: Mapped["ProductLot"] = relationship(back_populates="units")
 
 
-# class ContainerUnit(Base):
-#     __tablename__ = "container_unit"
-
-#     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-#     container_lot_id: Mapped[int] = mapped_column(
-#         ForeignKey("container_lot.id", ondelete="CASCADE")
-#     )
-#     container_lot: Mapped["ContainerLot"] = relationship(back_populates="units")
-
-
-# class PartUnit(Base):
-#     __tablename__ = "part_unit"
-
-#     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-#     part_lot_id: Mapped[int] = mapped_column(
-#         ForeignKey("part_lot.id", ondelete="CASCADE")
-#     )
-#     part_lot: Mapped["PartLot"] = relationship(back_populates="units")
-
-
 class ProductLot(Base, LotBase):
     __tablename__ = "product_lot"
 
@@ -237,9 +222,6 @@ class ContainerLot(Base, LotBase):
         ForeignKey("invoice.id", ondelete="CASCADE")
     )
     invoice: Mapped["Invoice"] = relationship(back_populates="container_lots")
-    # units: Mapped[List["ContainerUnit"]] = relationship(
-    #     back_populates="container_lot", cascade="all, delete-orphan"
-    # )
 
 
 class PartLot(Base, LotBase):
@@ -254,9 +236,6 @@ class PartLot(Base, LotBase):
         ForeignKey("invoice.id", ondelete="CASCADE")
     )
     invoice: Mapped["Invoice"] = relationship(back_populates="part_lots")
-    # units: Mapped[List["PartUnit"]] = relationship(
-    #     back_populates="part_lot", cascade="all, delete-orphan"
-    # )
 
 
 class ProductContainer(Base):

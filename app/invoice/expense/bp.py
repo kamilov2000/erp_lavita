@@ -1,4 +1,4 @@
-from app.choices import InvoiceTypes
+from app.choices import InvoiceStatuses, InvoiceTypes
 from app.utils.func import msg_response, token_required
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
@@ -6,7 +6,12 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
 from app.invoice.models import Invoice
-from app.invoice.schema import InvoiceQueryArgSchema, ExpenseSchema, PagExpenseSchema
+from app.invoice.schema import (
+    InvoiceDetailSchema,
+    InvoiceQueryArgSchema,
+    ExpenseSchema,
+    PagExpenseSchema,
+)
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.schema import ResponseSchema, TokenSchema
@@ -61,8 +66,9 @@ class InvoiceAllView(MethodView):
     @expense.response(400, ResponseSchema)
     @expense.response(201, ExpenseSchema)
     def post(c, self, new_data, token):
-        """Add a new expense"""
+        """Add a new published expense"""
         try:
+            new_data.status = InvoiceStatuses.PUBLISHED
             new_data.type = InvoiceTypes.EXPENSE
             new_data.user_id = c.id
             session.add(new_data)
@@ -79,7 +85,7 @@ class InvoiceAllView(MethodView):
 class InvoiceById(MethodView):
     @token_required
     @expense.arguments(TokenSchema, location="headers")
-    @expense.response(200, ExpenseSchema)
+    @expense.response(200, InvoiceDetailSchema)
     def get(c, self, token, expense_id):
         """Get expense by ID"""
         try:

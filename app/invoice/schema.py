@@ -109,8 +109,6 @@ class ContainerLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     def calc_price(self, data, **kwargs):
         quantity = data.get("quantity")
         data["total_sum"] = quantity * data.get("price")
-        # units_arr = [ContainerUnit() for _ in range(quantity)]
-        # data["units"] = units_arr
         return data
 
 
@@ -133,8 +131,6 @@ class PartLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     def calc_price(self, data, **kwargs):
         quantity = data.get("quantity")
         data["total_sum"] = quantity * data.get("price")
-        # units_arr = [PartUnit() for _ in range(quantity)]
-        # data["units"] = units_arr
         return data
 
 
@@ -269,7 +265,7 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
         include_fk = True
         load_instance = True
         sqla_session = session
-        unknown = ma.INCLUDE  # Add this line to exclude unknown fields
+        unknown = ma.INCLUDE  # Add this line to include unknown fields
 
     product_unit_markups = ma.fields.List(
         ma.fields.Str(), required=False, load_only=True
@@ -430,3 +426,59 @@ class InvoiceHistorySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class PagWarehouseHistorySchema(ma.Schema):
     data = ma.fields.Nested(InvoiceHistorySchema(many=True))
     pagination = ma.fields.Nested(PaginationSchema)
+
+
+class InvoiceDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
+    class Meta:
+        model = Invoice
+        include_fk = True
+
+    warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
+    warehouse_sender_address = ma.fields.Method("get_warehouse_sender_address")
+    comments = ma.fields.Nested(InvoiceCommentSchema, many=True)
+    logs = ma.fields.Nested(InvoiceLogSchema, many=True)
+    products = ma.fields.Method("get_products")
+    containers = ma.fields.Method("get_containers")
+    parts = ma.fields.Method("get_parts")
+
+    def get_products(self, obj):
+        products = {}
+        for lot in obj.product_lots:
+            product_name = lot.product.name
+            if product_name not in products:
+                products[product_name] = {
+                    "name": product_name,
+                    "quantity": 0,
+                    "total_sum": 0.0,
+                }
+            products[product_name]["quantity"] += lot.quantity
+            products[product_name]["total_sum"] += lot.total_sum or 0.0
+        return list(products.values())
+
+    def get_containers(self, obj):
+        containers = {}
+        for lot in obj.container_lots:
+            container_name = lot.container.name
+            if container_name not in containers:
+                containers[container_name] = {
+                    "name": container_name,
+                    "quantity": 0,
+                    "total_sum": 0.0,
+                }
+            containers[container_name]["quantity"] += lot.quantity
+            containers[container_name]["total_sum"] += lot.total_sum or 0.0
+        return list(containers.values())
+
+    def get_parts(self, obj):
+        parts = {}
+        for lot in obj.part_lots:
+            part_name = lot.part.name
+            if part_name not in parts:
+                parts[part_name] = {
+                    "name": part_name,
+                    "quantity": 0,
+                    "total_sum": 0.0,
+                }
+            parts[part_name]["quantity"] += lot.quantity
+            parts[part_name]["total_sum"] += lot.total_sum or 0.0
+        return list(parts.values())

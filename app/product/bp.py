@@ -197,7 +197,6 @@ def all_product_stats(cur_user, token):
 @product.arguments(TokenSchema, location="headers")
 @product.arguments(MarkupsArray)
 @product.response(200, ResponseSchema)
-@product.response(400, ResponseSchema)
 def check_markup(c, token, data):
     problem_markups = []
     for markup in data["markups"]:
@@ -205,7 +204,7 @@ def check_markup(c, token, data):
             ProductUnit.get_by_id(markup)
             problem_markups.append(markup)
         except ItemNotFoundError:
-            continue
+            problem_markups.append(markup)
     # ok = true if no problem markups
     ok = not bool(problem_markups)
     response = {"ok": ok, "data": None, "error": problem_markups if not ok else None}

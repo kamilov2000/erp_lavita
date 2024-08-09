@@ -28,6 +28,21 @@ class ProductContainerSchema(SQLAlchemyAutoSchema):
         exclude = ["created_at", "updated_at", "id"]
 
     product_id = auto_field(dump_only=True)
+    name = ma.fields.Method("get_name")
+    price = ma.fields.Method("get_price")
+
+    @staticmethod
+    def get_name(obj: ProductContainer):
+        return obj.container.name
+
+    @staticmethod
+    def get_price(obj: ProductContainer):
+        return ContainerLot.calculate_fifo_cost(
+            ContainerLot.container_id == obj.container_id,
+            obj.quantity,
+            obj.container_id,
+            False,
+        )
 
 
 class ProductPartSchema(SQLAlchemyAutoSchema):
@@ -39,6 +54,21 @@ class ProductPartSchema(SQLAlchemyAutoSchema):
         exclude = ["created_at", "updated_at", "id"]
 
     product_id = auto_field(dump_only=True)
+    name = ma.fields.Method("get_name")
+    price = ma.fields.Method("get_price")
+
+    @staticmethod
+    def get_name(obj: ProductPart):
+        return obj.part.name
+
+    @staticmethod
+    def get_price(obj: ProductPart):
+        return PartLot.calculate_fifo_cost(
+            PartLot.part_id == obj.part_id,
+            obj.quantity,
+            obj.part_id,
+            False,
+        )
 
 
 class ContainerPartSchema(SQLAlchemyAutoSchema):
@@ -50,6 +80,21 @@ class ContainerPartSchema(SQLAlchemyAutoSchema):
         exclude = ["created_at", "updated_at", "id"]
 
     container_id = auto_field(dump_only=True)
+    name = ma.fields.Method("get_name")
+    price = ma.fields.Method("get_price")
+
+    @staticmethod
+    def get_name(obj: ContainerPart):
+        return obj.part.name
+
+    @staticmethod
+    def get_price(obj: ContainerPart):
+        return PartLot.calculate_fifo_cost(
+            PartLot.part_id == obj.part_id,
+            obj.quantity,
+            obj.part_id,
+            False,
+        )
 
 
 class ProductSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
