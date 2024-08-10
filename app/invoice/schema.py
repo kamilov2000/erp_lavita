@@ -218,7 +218,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
                 if unit:
                     old_lot = unit.product_lot
                     old_lot.quantity -= 1
-                    expense_price += old_lot.product.self_cost
+                    expense_price += old_lot.price
                     old_lot.calc_total_sum()
                     quantity += 1
                     if obj["with_container"] is False:
