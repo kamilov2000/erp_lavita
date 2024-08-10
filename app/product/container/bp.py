@@ -40,7 +40,9 @@ class ContainerAllView(MethodView):
         if limit <= 0:
             limit = 10
         try:
-            query = Container.query.filter_by(**args)
+            query = Container.query.filter_by(**args).order_by(
+                Container.created_at.desc()
+            )
             total_count = query.count()
             total_pages = (total_count + limit - 1) // limit
             data = query.limit(limit).offset((page - 1) * limit).all()

@@ -47,7 +47,9 @@ class InvoiceAllView(MethodView):
             limit = 10
         try:
             number = args.pop("number", None)
-            query = Invoice.query.filter_by(type=InvoiceTypes.PRODUCTION, **args)
+            query = Invoice.query.filter_by(
+                type=InvoiceTypes.PRODUCTION, **args
+            ).order_by(Invoice.created_at.desc())
             if number:
                 query = query.filter(Invoice.number.ilike(f"%{number}%"))
             total_count = query.count()

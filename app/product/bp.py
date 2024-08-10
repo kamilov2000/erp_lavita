@@ -46,7 +46,9 @@ class ProductAllView(MethodView):
         if limit <= 0:
             limit = 10
         try:
-            query = Product.query.filter_by(**args)
+            query = Product.query.filter_by(**args).order_by(
+                Product.created_at.desc()
+            )
             total_count = query.count()
             total_pages = (total_count + limit - 1) // limit
             data = query.limit(limit).offset((page - 1) * limit).all()

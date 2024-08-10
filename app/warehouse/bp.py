@@ -47,7 +47,9 @@ class WarehouseAllView(MethodView):
         if limit <= 0:
             limit = 10
         try:
-            query = Warehouse.query.filter_by(**args)
+            query = Warehouse.query.filter_by(**args).order_by(
+                Warehouse.created_at.desc()
+            )
             if user_ids:
                 query = query.join(Warehouse.users).filter(User.id.in_(user_ids))
             total_count = query.count()

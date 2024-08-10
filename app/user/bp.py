@@ -116,7 +116,7 @@ class UserByIdView(MethodView):
 @user.response(200, PagUserSchema)
 def get_users(c, args, token):
     try:
-        query = User.query
+        query = User.query.order_by(User.created_at.desc())
 
         if "username" in args:
             query = query.filter(User.username.ilike(f"%{args['username']}%"))
