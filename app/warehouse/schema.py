@@ -133,6 +133,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
                     "id": id,
                     "name": name,
                     "quantity": quantity,
+                    "count": quantity,
                     "updated_at": updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f"),
                 }
             )
@@ -161,6 +162,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
                     "id": id,
                     "name": name,
                     "quantity": quantity,
+                    "count": quantity,
                     "updated_at": updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f"),
                 }
             )
@@ -188,6 +190,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
                     "id": id,
                     "name": name,
                     "quantity": quantity,
+                    "count": quantity,
                     "updated_at": updated_at.strftime("%Y-%m-%dT%H:%M:%S.%f"),
                 }
             )

@@ -170,6 +170,7 @@ class InvoiceSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     part_lots = ma.fields.Nested(PartLotSchema, many=True)
     warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
+    warehouse_receiver_name = ma.fields.Method("get_warehouse_receiver_name")
 
 
 class ProductionSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
@@ -183,6 +184,7 @@ class ProductionSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSche
     product_lots = ma.fields.Nested(ProductLotSchema, many=True)
     container_lots = ma.fields.Nested(ContainerLotSchema, many=True)
     warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
+    warehouse_receiver_name = ma.fields.Method("get_warehouse_receiver_name")
 
 
 class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema):
@@ -203,6 +205,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
         PartMoveSchema(many=True), required=False, load_only=True
     )
     warehouse_sender_address = ma.fields.Method("get_warehouse_sender_address")
+    warehouse_sender_name = ma.fields.Method("get_warehouse_sender_name")
 
     @ma.pre_load
     def clear_products(self, data, **kwargs):
@@ -281,6 +284,8 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
 
     warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
     warehouse_sender_name = ma.fields.Method("get_warehouse_sender_address")
+    warehouse_receiver_name = ma.fields.Method("get_warehouse_receiver_name")
+    warehouse_sender_name = ma.fields.Method("get_warehouse_sender_name")
 
     @ma.pre_load
     def clear_products(self, data, **kwargs):

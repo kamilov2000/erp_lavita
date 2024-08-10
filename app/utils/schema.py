@@ -69,6 +69,14 @@ class BaseInvoiceSchema:
     def get_warehouse_sender_address(obj):
         return obj.warehouse_sender.address if obj.warehouse_sender else None
 
+    @staticmethod
+    def get_warehouse_receiver_name(obj):
+        return obj.warehouse_receiver.name if obj.warehouse_receiver else None
+
+    @staticmethod
+    def get_warehouse_sender_name(obj):
+        return obj.warehouse_sender.name if obj.warehouse_sender else None
+
 
 class PaginationSchema(ma.Schema):
     page = ma.fields.Int()
