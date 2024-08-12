@@ -7,8 +7,8 @@ from app.choices import DebtTypes, InvoiceStatuses, InvoiceTypes, MeasumentTypes
 from app.base import Base, session
 from app.utils.exc import NotAvailableQuantity
 
-if TYPE_CHECKING:
-    from app.invoice.models import Invoice
+from app.invoice.models import Invoice
+# if TYPE_CHECKING:
 
 
 class LotBase:

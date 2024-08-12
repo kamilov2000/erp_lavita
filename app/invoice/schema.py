@@ -332,67 +332,69 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
     # part_lots = ma.fields.Raw(dump_only=True, required=False)  # Add this line
 
     warehouse_receiver_address = ma.fields.Method("get_warehouse_receiver_address")
-    warehouse_sender_name = ma.fields.Method("get_warehouse_sender_address")
+    warehouse_sender_address = ma.fields.Method("get_warehouse_sender_address")
     warehouse_receiver_name = ma.fields.Method("get_warehouse_receiver_name")
     warehouse_sender_name = ma.fields.Method("get_warehouse_sender_name")
 
     @ma.pre_load
     def clear_products(self, data, **kwargs):
+        data.pop("additionalProp1", [])
         product_unit_markups = data.pop("product_unit_markups", [])
-        units: List[ProductUnit] = ProductUnit.query.filter(
-            ProductUnit.id.in_(product_unit_markups)
-        ).all()
-        # Group units by product_id and price
-        grouped_units = defaultdict(list)
-        for unit in units:
-            key = (unit.product_lot.product_id, unit.product_lot.price)
-            grouped_units[key].append(unit)
-
-        new_lots = []
-        for (product_id, price), units in grouped_units.items():
-            # Calculate the total quantity for the new lot
-            total_quantity = sum(unit.product_lot.quantity for unit in units)
-
-            # Create a new ProductLot
-            new_lot = ProductLot(
-                quantity=total_quantity, price=price, product_id=product_id, units=units
-            )
-            new_lot.calc_total_sum()
-            new_lots.append(new_lot)
-
-            # Update units to reference the new lot
+        with session.no_autoflush:
+            units: List[ProductUnit] = ProductUnit.query.filter(
+                ProductUnit.id.in_(product_unit_markups)
+            ).all()
+            # Group units by product_id and price
+            grouped_units = defaultdict(list)
             for unit in units:
-                old_lot = unit.product_lot
-                old_lot.quantity -= 1
-                old_lot.calc_total_sum()
-                unit.product_lot = new_lot
-        session.add_all(new_lots)
+                key = (unit.product_lot.product_id, unit.product_lot.price)
+                grouped_units[key].append(unit)
 
-        # container SECTION
-        container_ids = data.pop("container_ids", [])
-        if container_ids:
-            transferring_containers = []
-            for obj in container_ids:
-                transferring_containers.extend(
-                    Container.decrease(
-                        container_id=obj["container_id"],
-                        decrease_quantity=obj["quantity"],
-                        transfer=True,
-                    )
+            new_lots = []
+            for (product_id, price), units in grouped_units.items():
+                # Calculate the total quantity for the new lot
+                total_quantity = sum(unit.product_lot.quantity for unit in units)
+
+                # Create a new ProductLot
+                new_lot = ProductLot(
+                    quantity=total_quantity, price=price, product_id=product_id, units=units
                 )
-            data["container_lots"] = transferring_containers
-        part_ids = data.pop("part_ids", [])
-        if part_ids:
-            transferring_parts = []
-            for obj in part_ids:
-                transferring_parts.extend(
-                    Part.decrease(
-                        part_id=obj["part_id"],
-                        decrease_quantity=obj["quantity"],
-                        transfer=True,
+                new_lot.calc_total_sum()
+                new_lots.append(new_lot)
+
+                # Update units to reference the new lot
+                for unit in units:
+                    old_lot = unit.product_lot
+                    old_lot.quantity -= 1
+                    old_lot.calc_total_sum()
+                    unit.product_lot = new_lot
+            data["product_lots"] = new_lots
+
+            # container SECTION
+            container_ids = data.pop("container_ids", [])
+            if container_ids:
+                transferring_containers = []
+                for obj in container_ids:
+                    transferring_containers.extend(
+                        Container.decrease(
+                            container_id=obj["container_id"],
+                            decrease_quantity=obj["quantity"],
+                            transfer=True,
+                        )
                     )
-                )
-            data["part_lots"] = transferring_parts
+                data["container_lots"] = transferring_containers
+            part_ids = data.pop("part_ids", [])
+            if part_ids:
+                transferring_parts = []
+                for obj in part_ids:
+                    transferring_parts.extend(
+                        Part.decrease(
+                            part_id=obj["part_id"],
+                            decrease_quantity=obj["quantity"],
+                            transfer=True,
+                        )
+                    )
+                data["part_lots"] = transferring_parts
         return data
 
 
