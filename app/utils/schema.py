@@ -45,12 +45,16 @@ class BaseInvoiceSchema:
         invoice = Invoice(**data)
         if "product_lots" in data:
             invoice.product_lots = data["product_lots"]
-        data["price"] = (
+        if not data.get("quantity"):
+            data["quantity"] = 0
+        if not data.get("price"):
+            data["price"] = 0
+        data["price"] += (
             invoice.calc_container_lots_price()
             + invoice.calc_product_lots_price()
             + invoice.calc_part_lots_price()
         )
-        data["quantity"] = (
+        data["quantity"] += (
             invoice.calc_container_lots_quantity()
             + invoice.calc_part_lots_quantity()
             + invoice.calc_product_lots_quantity()

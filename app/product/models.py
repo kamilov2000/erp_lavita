@@ -104,20 +104,24 @@ class Container(Base):
             if lot.quantity >= decrease_quantity:
                 lot.quantity -= decrease_quantity
                 lot.calc_total_sum()
-                if transfer:
-                    new_lot = ContainerLot(
-                        quantity=decrease_quantity,
-                        price=lot.price,
-                        container_id=container_id,
-                    )
-                    new_lot.calc_total_sum()
-                    return [new_lot]
+                new_lot = ContainerLot(
+                    quantity=decrease_quantity,
+                    price=lot.price,
+                    container_id=container_id,
+                )
+                new_lot.calc_total_sum()
+                return [new_lot]
             elif lot.quantity < decrease_quantity:
                 decrease_quantity -= lot.quantity
+                new_lot = ContainerLot(
+                    quantity=lot.quantity,
+                    price=lot.price,
+                    container_id=container_id,
+                )
+                new_lot.calc_total_sum()
                 lot.quantity = 0
                 lot.calc_total_sum()
-                if transfer:
-                    res_lots.append(lot)
+                res_lots.append(new_lot)
         if decrease_quantity > 0 and not transfer:
             debt = Debt(
                 quantity=decrease_quantity,
@@ -152,19 +156,22 @@ class Part(Base):
             if lot.quantity >= decrease_quantity:
                 lot.calc_total_sum()
                 lot.quantity -= decrease_quantity
-                if transfer:
-                    new_lot = PartLot(
-                        quantity=decrease_quantity,
-                        price=lot.price,
-                        part_id=lot.part_id,
-                    )
-                    new_lot.calc_total_sum()
-                    return [new_lot]
+                new_lot = PartLot(
+                    quantity=decrease_quantity,
+                    price=lot.price,
+                    part_id=lot.part_id,
+                )
+                new_lot.calc_total_sum()
+                return [new_lot]
             elif lot.quantity < decrease_quantity:
                 decrease_quantity -= lot.quantity
-                if transfer:
-                    res_lots.append(lot)
-                    continue
+                new_lot = PartLot(
+                    quantity=lot.quantity,
+                    price=lot.price,
+                    part_id=lot.part_id,
+                )
+                new_lot.calc_total_sum()
+                res_lots.append(new_lot)
                 lot.quantity = 0
                 lot.calc_total_sum()
         if decrease_quantity > 0 and not transfer:

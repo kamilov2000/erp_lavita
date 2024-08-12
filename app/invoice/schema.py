@@ -104,11 +104,10 @@ class ContainerLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     @staticmethod
     def get_container_name(obj):
         return obj.container.name
-        
-    
+
     @ma.post_load
     def calc_price(self, data, **kwargs):
-        
+
         quantity = data.get("quantity")
         container_id = data.get("container_id")
         if data.get("price") is not None:
@@ -217,6 +216,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
         load_instance = True
         exclude = ["warehouse_receiver_id"]
         sqla_session = session
+        unknown = ma.INCLUDE  # Add this line to include unknown fields
 
     product_unit_markups = ma.fields.Nested(
         ProductUnitMoveWebSchema(many=True), required=False, load_only=True
@@ -232,56 +232,82 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
 
     @ma.pre_load
     def clear_products(self, data, **kwargs):
-        quantity = 0
-        expense_price = 0
         product_unit_markups = data.pop("product_unit_markups", [])
-        if product_unit_markups:
-            for obj in product_unit_markups:
-                unit: ProductUnit | None = ProductUnit.query.get(obj["markup"])
-                if unit:
-                    old_lot = unit.product_lot
-                    old_lot.quantity -= 1
-                    expense_price += old_lot.price
-                    old_lot.calc_total_sum()
-                    quantity += 1
-                    if obj["with_container"] is False:
-                        for container_r in old_lot.product.containers_r:
-                            c_lot = (
-                                ContainerLot.query.join(
-                                    Invoice, Invoice.id == ContainerLot.invoice_id
+        with session.no_autoflush:
+            if product_unit_markups:
+                expended_products = {}
+                for obj in product_unit_markups:
+                    unit: ProductUnit | None = ProductUnit.query.get(obj["markup"])
+                    if unit:
+                        old_lot = unit.product_lot
+                        old_lot.quantity -= 1
+                        old_lot.calc_total_sum()
+                        if not expended_products.get(old_lot.product_id):
+                            expended_products[old_lot.product_id] = {}
+                            expended_products[old_lot.product_id]["quantity"] = 1
+                            expended_products[old_lot.product_id][
+                                "price"
+                            ] = old_lot.price
+                            expended_products[old_lot.product_id]["units"] = [unit]
+                        else:
+                            expended_products[old_lot.product_id]["quantity"] += 1
+                            expended_products[old_lot.product_id]["units"].append(unit)
+                        if obj["with_container"] is False:
+                            for container_r in old_lot.product.containers_r:
+                                c_lot = (
+                                    ContainerLot.query.join(
+                                        Invoice, Invoice.id == ContainerLot.invoice_id
+                                    )
+                                    .filter(
+                                        ContainerLot.container_id
+                                        == container_r.container_id,
+                                        # Invoice.warehouse_receiver_id
+                                        # == data["warehouse_sender_id"],
+                                        Invoice.type != InvoiceTypes.EXPENSE,
+                                    )
+                                    .order_by(ContainerLot.created_at.desc())
+                                    .first()
                                 )
-                                .filter(
-                                    ContainerLot.container_id
-                                    == container_r.container_id,
-                                    Invoice.warehouse_receiver_id
-                                    == data["warehouse_sender_id"],
-                                    Invoice.type != InvoiceTypes.EXPENSE,
-                                )
-                                .order_by(ContainerLot.created_at.desc())
-                                .first()
-                            )
-                            c_lot += container_r.quantity
+                                if c_lot:
+                                    c_lot.quantity += container_r.quantity
+                if expended_products:
+                    product_lots = []
+                    for product_id, obj in expended_products.items():
+                        lot = ProductLot(
+                            product_id=product_id,
+                            quantity=obj.get("quantity"),
+                            price=obj.get("price"),
+                            units=obj.get("units")
+                        )
+                        lot.calc_total_sum()
+                        product_lots.append(lot)
+                    data["product_lots"] = product_lots
 
-        # container SECTION
-        container_ids = data.pop("container_ids", [])
-        if container_ids:
-            for obj in container_ids:
-                Container.decrease(
-                    container_id=obj["container_id"],
-                    decrease_quantity=obj["quantity"],
-                    transfer=False,
-                )
-                quantity += obj["quantity"]
-        part_ids = data.pop("part_ids", [])
-        if part_ids:
-            for obj in part_ids:
-                Part.decrease(
-                    part_id=obj["part_id"],
-                    decrease_quantity=obj["quantity"],
-                    transfer=False,
-                )
-                quantity += obj["quantity"]
-        data["quantity"] = quantity
+            # container SECTION
+            container_ids = data.pop("container_ids", [])
+            if container_ids:
+                expended_containers = []
+                for obj in container_ids:
+                    expended_containers.extend(
+                        Container.decrease(
+                            container_id=obj["container_id"],
+                            decrease_quantity=obj["quantity"],
+                            transfer=False,
+                        )
+                    )
+                data["container_lots"] = expended_containers
+            part_ids = data.pop("part_ids", [])
+            if part_ids:
+                expended_parts = []
+                for obj in part_ids:
+                    expended_parts.extend(
+                        Part.decrease(
+                            part_id=obj["part_id"],
+                            decrease_quantity=obj["quantity"],
+                            transfer=False,
+                        )
+                    )
+                data["part_lots"] = expended_parts
         return data
 
 

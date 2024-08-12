@@ -93,11 +93,12 @@ class Base(DeclarativeBase):
         return updated_columns
 
     @classmethod
-    def get_by_id(cls, ident):
-        try:
-            ident = int(ident)
-        except ValueError:
-            raise ItemNotFoundError(f"Not found {cls.__tablename__} with id: {ident}")
+    def get_by_id(cls, ident, _type=int):
+        if _type == int:
+            try:
+                ident = int(ident)
+            except ValueError:
+                raise ItemNotFoundError(f"Not found {cls.__tablename__} with id: {ident}")
         res = cls.query.get(ident)
         if not res:
             raise ItemNotFoundError(f"Not found {cls.__tablename__} with id: {ident}")

@@ -203,7 +203,7 @@ def check_markup(c, token, data):
     problem_markups = []
     for markup in data["markups"]:
         try:
-            ProductUnit.get_by_id(markup)
+            ProductUnit.get_by_id(markup, str)
             problem_markups.append(markup)
         except ItemNotFoundError:
             problem_markups.append(markup)
