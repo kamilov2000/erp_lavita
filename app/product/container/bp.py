@@ -1,9 +1,11 @@
 import os
 from flask import current_app
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
+from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
 from app.product.models import Container, ContainerLot
 from app.product.schema import (
@@ -11,11 +13,13 @@ from app.product.schema import (
     PhotoSchema,
     ProductQueryArgSchema,
     ContainerSchema,
+    StandaloneProductWarehouseStats,
 )
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
 from app.utils.schema import ResponseSchema, TokenSchema
+from app.warehouse.models import Warehouse
 
 
 container = Blueprint(
@@ -146,3 +150,49 @@ def change_photo(cur_user, photo, token, container_id):
     container.photo = path
     session.commit()
     return container
+
+
+@container.get("/<container_id>/warehouse-stats/")
+@token_required
+@container.arguments(TokenSchema, location="headers")
+@container.response(200, StandaloneProductWarehouseStats)
+def standalone_container_warehouse_stats(c, token, container_id):
+    Container.get_by_id(container_id)
+    total_quantity_sum = (
+        session.query(func.sum(ContainerLot.quantity), func.sum(ContainerLot.total_sum))
+        .join(Invoice, ContainerLot.invoice_id == Invoice.id)
+        .filter(
+            Invoice.warehouse_receiver_id.isnot(None),
+            Invoice.status == InvoiceStatuses.PUBLISHED,
+            Invoice.type != InvoiceTypes.EXPENSE,
+            ContainerLot.quantity != 0,
+            ContainerLot.container_id == container_id,
+        )
+        .all()
+    )
+    total_quantity, total_sum = total_quantity_sum[0]
+    warehouse_data = (
+        session.query(
+            Warehouse.id,
+            Warehouse.name,
+            func.sum(ContainerLot.quantity).label("total_quantity"),
+            func.sum(ContainerLot.total_sum).label("total_sum"),
+        )
+        .join(Invoice, ContainerLot.invoice_id == Invoice.id)
+        .join(Warehouse, Invoice.warehouse_receiver_id == Warehouse.id)
+        .filter(
+            Invoice.warehouse_receiver_id.isnot(None),
+            Invoice.status == InvoiceStatuses.PUBLISHED,
+            Invoice.type != InvoiceTypes.EXPENSE,
+            ContainerLot.quantity != 0,
+            ContainerLot.container_id == container_id,
+        )
+        .group_by(Warehouse.id, Warehouse.name)
+        .all()
+    )
+    response = {
+        "total_quantity": total_quantity,
+        "total_sum": total_sum,
+        "warehouse_data": warehouse_data,
+    }
+    return response

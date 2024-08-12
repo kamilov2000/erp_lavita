@@ -287,3 +287,34 @@ class AllProductsStats(ma.Schema):
 
 class MarkupsArray(ma.Schema):
     markups = ma.fields.List(ma.fields.Str())
+
+
+class WarehouseDataStats(ma.Schema):
+    warehouse_id = ma.fields.Int()
+    warehouse_name = ma.fields.Str()
+    total_quantity = ma.fields.Int()
+    total_sum = ma.fields.Float()
+
+
+class StandaloneProductWarehouseStats(ma.Schema):
+    total_quantity = ma.fields.Int()
+    total_sum = ma.fields.Float()
+    warehouse_data = ma.fields.Nested(WarehouseDataStats, many=True)
+
+
+class OneProductInvoiceStatsQuery(ma.Schema):
+    status = ma.fields.Enum(InvoiceStatuses, by_value=True)
+    type = ma.fields.Enum(InvoiceTypes, by_value=True)
+    user_id = ma.fields.Int()
+    date = ma.fields.Date()
+
+
+class StandaloneProductInvoiceStats(ma.Schema):
+    invoice_id = ma.fields.Int()
+    invoice_number = ma.fields.Str()
+    invoice_status = ma.fields.Enum(InvoiceStatuses, by_value=True)
+    invoice_type = ma.fields.Enum(InvoiceTypes, by_value=True)
+    invoice_created_at = ma.fields.DateTime()
+    user_full_name = ma.fields.Str()
+    product_sum = ma.fields.Float()
+    invoice_total_sum = ma.fields.Float()

@@ -125,7 +125,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .join(ProductLot, ProductLot.product_id == Product.id)
             .join(Invoice, Invoice.warehouse_receiver_id == obj.id)
             .filter(
-                ProductLot.quantity > 0,
+                ProductLot.quantity != 0,
                 Invoice.status == InvoiceStatuses.PUBLISHED,
             )
             .group_by(Product.id, Product.name)
@@ -158,7 +158,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .filter(
                 Invoice.warehouse_receiver_id == obj.id,
                 Invoice.status == InvoiceStatuses.PUBLISHED,
-                ContainerLot.quantity > 0,
+                ContainerLot.quantity != 0,
             )
             .group_by(Container.id, Container.name)
             .all()
@@ -188,7 +188,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .join(PartLot, PartLot.part_id == Part.id)
             .join(Invoice, Invoice.warehouse_receiver_id == obj.id)
             .filter(
-                PartLot.quantity > 0,
+                PartLot.quantity != 0,
                 Invoice.status == InvoiceStatuses.PUBLISHED,
             )
             .group_by(Part.id, Part.name)

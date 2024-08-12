@@ -1,9 +1,11 @@
 import os
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
+from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
 from app.product.models import Part, PartLot
 from app.product.schema import (
@@ -11,11 +13,13 @@ from app.product.schema import (
     PhotoSchema,
     ProductQueryArgSchema,
     PartSchema,
+    StandaloneProductWarehouseStats,
 )
 from app.base import session
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
 from app.utils.schema import ResponseSchema, TokenSchema
+from app.warehouse.models import Warehouse
 
 
 part = Blueprint(
@@ -144,3 +148,49 @@ def change_photo(cur_user, photo, token, part_id):
     part.photo = path
     session.commit()
     return part
+
+
+@part.get("/<part_id>/warehouse-stats/")
+@token_required
+@part.arguments(TokenSchema, location="headers")
+@part.response(200, StandaloneProductWarehouseStats)
+def standalone_part_warehouse_stats(c, token, part_id):
+    Part.get_by_id(part_id)
+    total_quantity_sum = (
+        session.query(func.sum(PartLot.quantity), func.sum(PartLot.total_sum))
+        .join(Invoice, PartLot.invoice_id == Invoice.id)
+        .filter(
+            Invoice.warehouse_receiver_id.isnot(None),
+            Invoice.status == InvoiceStatuses.PUBLISHED,
+            Invoice.type != InvoiceTypes.EXPENSE,
+            PartLot.quantity != 0,
+            PartLot.part_id == part_id,
+        )
+        .all()
+    )
+    total_quantity, total_sum = total_quantity_sum[0]
+    warehouse_data = (
+        session.query(
+            Warehouse.id,
+            Warehouse.name,
+            func.sum(PartLot.quantity).label("total_quantity"),
+            func.sum(PartLot.total_sum).label("total_sum"),
+        )
+        .join(Invoice, PartLot.invoice_id == Invoice.id)
+        .join(Warehouse, Invoice.warehouse_receiver_id == Warehouse.id)
+        .filter(
+            Invoice.warehouse_receiver_id.isnot(None),
+            Invoice.status == InvoiceStatuses.PUBLISHED,
+            Invoice.type != InvoiceTypes.EXPENSE,
+            PartLot.quantity != 0,
+            PartLot.part_id == part_id,
+        )
+        .group_by(Warehouse.id, Warehouse.name)
+        .all()
+    )
+    response = {
+        "total_quantity": total_quantity,
+        "total_sum": total_sum,
+        "warehouse_data": warehouse_data,
+    }
+    return response

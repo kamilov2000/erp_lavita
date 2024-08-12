@@ -1,22 +1,27 @@
 import os
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
+from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
 from app.invoice.schema import ProductUnitSchema
 from app.product.models import Container, Part, Product, ProductLot, ProductUnit
 from app.product.schema import (
     AllProductsStats,
     MarkupsArray,
+    OneProductInvoiceStatsQuery,
     PagProductSchema,
     PhotoSchema,
     ProductQueryArgSchema,
     ProductSchema,
+    StandaloneProductInvoiceStats,
+    StandaloneProductWarehouseStats,
 )
 from app.base import session
+from app.user.models import User
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
 from app.utils.schema import ResponseSchema, TokenSchema
@@ -216,3 +221,97 @@ def check_markup(c, token, data):
     ok = not bool(problem_markups)
     response = {"ok": ok, "data": None, "error": problem_markups if not ok else None}
     return response
+
+
+@product.get("/<product_id>/warehouse-stats/")
+@token_required
+@product.arguments(TokenSchema, location="headers")
+@product.response(200, StandaloneProductWarehouseStats)
+def standalone_product_warehouse_stats(c, token, product_id):
+    Product.get_by_id(product_id)
+    total_quantity_sum = (
+        session.query(func.sum(ProductLot.quantity), func.sum(ProductLot.total_sum))
+        .join(Invoice, ProductLot.invoice_id == Invoice.id)
+        .filter(
+            Invoice.warehouse_receiver_id.isnot(None),
+            Invoice.status == InvoiceStatuses.PUBLISHED,
+            Invoice.type != InvoiceTypes.EXPENSE,
+            ProductLot.quantity != 0,
+            ProductLot.product_id == product_id,
+        )
+        .all()
+    )
+    total_quantity, total_sum = total_quantity_sum[0]
+    warehouse_data = (
+        session.query(
+            Warehouse.id,
+            Warehouse.name,
+            func.sum(ProductLot.quantity).label("total_quantity"),
+            func.sum(ProductLot.total_sum).label("total_sum"),
+        )
+        .join(Invoice, ProductLot.invoice_id == Invoice.id)
+        .join(Warehouse, Invoice.warehouse_receiver_id == Warehouse.id)
+        .filter(
+            Invoice.warehouse_receiver_id.isnot(None),
+            Invoice.status == InvoiceStatuses.PUBLISHED,
+            Invoice.type != InvoiceTypes.EXPENSE,
+            ProductLot.quantity != 0,
+            ProductLot.product_id == product_id,
+        )
+        .group_by(Warehouse.id, Warehouse.name)
+        .all()
+    )
+    response = {
+        "total_quantity": total_quantity,
+        "total_sum": total_sum,
+        "warehouse_data": warehouse_data,
+    }
+    return response
+
+
+@product.get("/<product_id>/invoice-stats/")
+@token_required
+@product.arguments(TokenSchema, location="headers")
+@product.arguments(OneProductInvoiceStatsQuery, location="query")
+@product.response(200, StandaloneProductInvoiceStats(many=True))
+def standalone_product_invoice_stats(c, token, args, product_id):
+    status_filter = args.pop("status", None)
+    type_filter = args.pop("type", None)
+    user_id_filter = args.pop("user_id", None)
+    date_filter = args.pop("date", None)
+    query = (
+        session.query(
+            Invoice.id,
+            Invoice.number,
+            Invoice.status,
+            Invoice.type,
+            Invoice.created_at,
+            User.full_name.label("responsible"),
+            func.sum(ProductLot.total_sum).label("product_total_sum"),
+            Invoice.price.label("invoice_total_sum"),
+        )
+        .join(ProductLot, ProductLot.invoice_id == Invoice.id)
+        .join(User, Invoice.user_id == User.id)
+        .filter(ProductLot.product_id == product_id)
+    )
+
+    # Добавление фильтров
+    if status_filter:
+        query = query.filter(Invoice.status == status_filter)
+    if type_filter:
+        query = query.filter(Invoice.type == type_filter)
+    if user_id_filter:
+        query = query.filter(Invoice.user_id == user_id_filter)
+    if date_filter:
+        query = query.filter(func.date(Invoice.created_at) == date_filter)
+
+    invoices_with_product = query.group_by(
+        Invoice.id,
+        Invoice.number,
+        Invoice.status,
+        Invoice.type,
+        Invoice.created_at,
+        User.full_name,
+        Invoice.price,
+    ).all()
+    return invoices_with_product
