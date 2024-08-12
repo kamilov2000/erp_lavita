@@ -147,6 +147,8 @@ def get_markups_of_product(c, token, production_id, product_id):
     res = session.execute(
         select(ProductUnit)
         .join(ProductLot, ProductLot.id == ProductUnit.product_lot_id)
-        .where(ProductLot.product_id == product_id)
+        .where(
+            ProductLot.product_id == product_id, ProductLot.invoice_id == production_id
+        )
     ).scalars()
     return res
