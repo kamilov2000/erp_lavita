@@ -1,5 +1,6 @@
 from sqlalchemy import Column, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from typing import List, Optional, TYPE_CHECKING
@@ -31,7 +32,7 @@ class User(Base):
     )
     invoices: Mapped[List["Invoice"]] = relationship(back_populates="user")
 
-    @property
+    @hybrid_property
     def full_name(self) -> str:
         return f"{self.last_name or ''} {self.first_name or ''}"
 
