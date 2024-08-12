@@ -2,15 +2,16 @@ import datetime
 from functools import wraps
 from hashlib import sha256
 import os
-from typing import Container
 from flask import current_app, jsonify, request
 import jwt
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 
+from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
 from app.product.models import Part
+from app.product.models import Container
 from app.user.models import User
 from app.base import session
 from app.utils.exc import ItemNotFoundError
@@ -86,33 +87,47 @@ def hash_image_save(
 
 
 def cancel_invoice(invoice_id):
-    invoice = Invoice.query.get(invoice_id)
-    if not invoice:
-        raise ValueError("Invoice not found")
+    invoice = Invoice.get_by_id(invoice_id)
 
-    if invoice.status != "опубликован":
-        raise ValueError("Only published invoices can be cancelled")
+    if invoice.status == InvoiceStatuses.PUBLISHED:
+        if invoice.type == InvoiceTypes.EXPENSE:
+            # Восстановление количества продуктов
+            for product_lot in invoice.product_lots:
+                for unit in product_lot.units:
+                    old_lot = unit.product_lot
+                    old_lot.quantity += 1
+                    old_lot.calc_total_sum()
+                    unit.product_lot = old_lot
 
-    # Восстановление количества продуктов
-    for product_lot in invoice.product_lots:
-        for unit in product_lot.units:
-            old_lot = unit.product_lot
-            old_lot.quantity += 1
-            old_lot.calc_total_sum()
-            unit.product_lot = old_lot
+            # Восстановление количества контейнеров
+            for container_lot in invoice.container_lots:
+                Container.increase(container_lot.container_id, container_lot.quantity)
 
-    # Восстановление количества контейнеров
-    for container_lot in invoice.container_lots:
-        container = Container.query.get(container_lot.container_id)
-        if container:
-            container.quantity += container_lot.quantity
+            # Восстановление количества частей
+            for part_lot in invoice.part_lots:
+                Part.increase(part_lot.part_id, part_lot.quantity)
+        if invoice.type in [InvoiceTypes.INVOICE, InvoiceTypes.PRODUCTION]:
+            for product_lot in invoice.product_lots:
+                for unit in product_lot.units:
+                    old_lot = unit.product_lot
+                    old_lot.quantity -= 1
+                    old_lot.calc_total_sum()
+                    unit.product_lot = old_lot
 
-    # Восстановление количества частей
-    for part_lot in invoice.part_lots:
-        part = Part.query.get(part_lot.part_id)
-        if part:
-            part.quantity += part_lot.quantity
+            # Восстановление количества контейнеров
+            for container_lot in invoice.container_lots:
+                container = Container.decrease(
+                    container_lot.container_id, container_lot.quantity
+                )
+                if container:
+                    container.quantity -= container_lot.quantity
+
+            # Восстановление количества частей
+            for part_lot in invoice.part_lots:
+                part = Part.query.get(part_lot.part_id)
+                if part:
+                    part.quantity -= part_lot.quantity
 
     # Изменение статуса инвойса на "отменён"
-    invoice.status = "отменён"
+    invoice.status = InvoiceStatuses.CANCELED
     session.commit()

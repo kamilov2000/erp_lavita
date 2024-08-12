@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from app.choices import InvoiceStatuses
 from app.invoice.models import Invoice
 from app.invoice.schema import PagWarehouseHistorySchema
 from app.user.models import User
@@ -154,12 +155,14 @@ def get_history(c, args, token, warehouse_id):
         limit = 10
     try:
         sender_invoices = session.query(Invoice).filter(
-            Invoice.warehouse_sender_id == warehouse_id
+            Invoice.warehouse_sender_id == warehouse_id,
+            Invoice.status == InvoiceStatuses.PUBLISHED,
         )
 
         # Query for receiver invoices
         receiver_invoices = session.query(Invoice).filter(
-            Invoice.warehouse_receiver_id == warehouse_id
+            Invoice.warehouse_receiver_id == warehouse_id,
+            Invoice.status == InvoiceStatuses.PUBLISHED,
         )
 
         # Combine the queries using union_all

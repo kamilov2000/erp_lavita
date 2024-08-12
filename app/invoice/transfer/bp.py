@@ -9,6 +9,7 @@ from app.invoice.models import Invoice
 from app.invoice.schema import (
     InvoiceDetailSchema,
     InvoiceQueryArgSchema,
+    InvoiceQueryDraftSchema,
     PagTransferSchema,
     TransferSchema,
 )
@@ -68,12 +69,16 @@ class InvoiceAllView(MethodView):
     @token_required
     @transfer.arguments(TransferSchema)
     @transfer.arguments(TokenSchema, location="headers")
+    @transfer.arguments(InvoiceQueryDraftSchema, location="query")
     @transfer.response(400, ResponseSchema)
     @transfer.response(201, TransferSchema)
-    def post(c, self, new_data, token):
-        """Add a new published transfer"""
+    def post(c, self, new_data, token, is_draft):
+        """Add a new published/draft transfer"""
         try:
-            new_data.status = InvoiceStatuses.PUBLISHED
+            if is_draft:
+                new_data.status = InvoiceStatuses.DRAFT
+            else:
+                new_data.status = InvoiceStatuses.PUBLISHED
             new_data.type = InvoiceTypes.TRANSFER
             new_data.user_id = c.id
             session.add(new_data)

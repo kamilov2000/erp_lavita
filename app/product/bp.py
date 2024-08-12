@@ -37,6 +37,7 @@ class ProductAllView(MethodView):
     def get(c, self, args, token):
         """List products"""
         page = args.pop("page", 1)
+        warehouse_id = args.pop("warehouse_id", None)
         try:
             limit = int(args.pop("limit", 10))
             if limit <= 0:
@@ -46,9 +47,13 @@ class ProductAllView(MethodView):
         if limit <= 0:
             limit = 10
         try:
-            query = Product.query.filter_by(**args).order_by(
-                Product.created_at.desc()
-            )
+            query = Product.query.filter_by(**args).order_by(Product.created_at.desc())
+            if warehouse_id:
+                query = (
+                    query.join(ProductLot, ProductLot.product_id == Product.id)
+                    .join(Invoice, Invoice.id == ProductLot.invoice_id)
+                    .where(Invoice.warehouse_receiver_id == warehouse_id)
+                )
             total_count = query.count()
             total_pages = (total_count + limit - 1) // limit
             data = query.limit(limit).offset((page - 1) * limit).all()

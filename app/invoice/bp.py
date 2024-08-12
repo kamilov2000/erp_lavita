@@ -9,6 +9,7 @@ from app.invoice.models import Invoice
 from app.invoice.schema import (
     InvoiceDetailSchema,
     InvoiceQueryArgSchema,
+    InvoiceQueryDraftSchema,
     InvoiceSchema,
     PagInvoiceSchema,
 )
@@ -68,12 +69,17 @@ class InvoiceAllView(MethodView):
     @token_required
     @invoice.arguments(InvoiceSchema)
     @invoice.arguments(TokenSchema, location="headers")
+    @invoice.arguments(InvoiceQueryDraftSchema, location="query")
     @invoice.response(400, ResponseSchema)
     @invoice.response(201, InvoiceSchema)
-    def post(c, self, new_data, token):
-        """Add a new published invoice"""
+    def post(c, self, new_data, token, is_draft):
+        """Add a new published/draft invoice"""
         try:
-            new_data.status = InvoiceStatuses.PUBLISHED
+            if is_draft:
+                new_data.status = InvoiceStatuses.DRAFT
+            else:
+                new_data.status = InvoiceStatuses.PUBLISHED
+
             new_data.user_id = c.id
             session.add(new_data)
             session.commit()

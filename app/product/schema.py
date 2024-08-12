@@ -2,7 +2,7 @@ import marshmallow as ma
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, SQLAlchemySchema, auto_field
 from sqlalchemy import func, select
 
-from app.choices import InvoiceTypes, MeasumentTypes
+from app.choices import InvoiceStatuses, InvoiceTypes, MeasumentTypes
 from app.invoice.models import Invoice
 from app.product.models import (
     Container,
@@ -139,6 +139,7 @@ class ProductQueryArgSchema(ma.Schema):
     limit = ma.fields.Int(default=1)
     measurement = ma.fields.Enum(MeasumentTypes, by_value=True, required=False)
     name = ma.fields.Str(required=False)
+    warehouse_id = ma.fields.Str(required=False)
 
 
 class PhotoSchema(ma.Schema):
@@ -180,6 +181,7 @@ class ProductStatSchema(SQLAlchemySchema):
             .where(
                 ProductLot.product_id == obj.id,
                 Invoice.type.in_([InvoiceTypes.TRANSFER, InvoiceTypes.PRODUCTION]),
+                Invoice.status == InvoiceStatuses.PUBLISHED,
             )
         ).scalar()
         return res
@@ -192,6 +194,7 @@ class ProductStatSchema(SQLAlchemySchema):
             .where(
                 ProductLot.product_id == obj.id,
                 Invoice.type.in_([InvoiceTypes.TRANSFER, InvoiceTypes.PRODUCTION]),
+                Invoice.status == InvoiceStatuses.PUBLISHED,
             )
         ).scalar()
         return res
@@ -217,6 +220,7 @@ class ContainerStatSchema(SQLAlchemySchema):
             .where(
                 ContainerLot.container_id == obj.id,
                 Invoice.type != InvoiceTypes.EXPENSE,
+                Invoice.status == InvoiceStatuses.PUBLISHED,
             )
         ).scalar()
         return res
@@ -229,6 +233,7 @@ class ContainerStatSchema(SQLAlchemySchema):
             .where(
                 ContainerLot.container_id == obj.id,
                 Invoice.type != InvoiceTypes.EXPENSE,
+                Invoice.status == InvoiceStatuses.PUBLISHED,
             )
         ).scalar()
         return res
@@ -254,6 +259,7 @@ class PartStatSchema(SQLAlchemySchema):
             .where(
                 PartLot.part_id == obj.id,
                 Invoice.type.in_([InvoiceTypes.TRANSFER, InvoiceTypes.INVOICE]),
+                Invoice.status == InvoiceStatuses.PUBLISHED,
             )
         ).scalar()
         print(res)
@@ -267,6 +273,7 @@ class PartStatSchema(SQLAlchemySchema):
             .where(
                 PartLot.part_id == obj.id,
                 Invoice.type.in_([InvoiceTypes.TRANSFER, InvoiceTypes.INVOICE]),
+                Invoice.status == InvoiceStatuses.PUBLISHED,
             )
         ).scalar()
         return res

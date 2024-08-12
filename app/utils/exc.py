@@ -16,3 +16,7 @@ class NotRightQuantity(CustomError):
 
 class MarkupUniqueError(CustomError):
     pass
+
+
+class NotRightStatus(CustomError):
+    pass

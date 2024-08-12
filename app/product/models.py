@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import List, Optional, TYPE_CHECKING
 import enum
-from app.choices import DebtTypes, MeasumentTypes
+from app.choices import DebtTypes, InvoiceStatuses, InvoiceTypes, MeasumentTypes
 from app.base import Base, session
 from app.utils.exc import NotAvailableQuantity
 
@@ -95,7 +95,12 @@ class Container(Base):
         if decrease_quantity <= 0:
             return
         lots = (
-            ContainerLot.query.where(ContainerLot.container_id == container_id)
+            ContainerLot.query.join(Invoice, Invoice.id == ContainerLot.invoice_id)
+            .where(
+                ContainerLot.container_id == container_id,
+                Invoice.status == InvoiceStatuses.PUBLISHED,
+                Invoice.type != InvoiceTypes.EXPENSE,
+            )
             .order_by(ContainerLot.created_at.asc())
             .all()
         )
@@ -132,6 +137,22 @@ class Container(Base):
         else:
             raise NotAvailableQuantity("Quantity is more than expected")
         return res_lots
+
+    @staticmethod
+    def increase(container_id, increase_quantity):
+        if increase_quantity <= 0:
+            return
+        lot = (
+            ContainerLot.query.join(Invoice, Invoice.id == ContainerLot.invoice_id)
+            .where(
+                ContainerLot.container_id == container_id,
+                Invoice.status == InvoiceStatuses.PUBLISHED,
+                Invoice.type != InvoiceTypes.EXPENSE,
+            )
+            .order_by(ContainerLot.created_at.asc())
+            .first()
+        )
+        lot.quantity += increase_quantity
 
 
 class Part(Base):
@@ -185,6 +206,22 @@ class Part(Base):
             raise NotAvailableQuantity("Quantity is more than expected")
         return res_lots
 
+    @staticmethod
+    def increase(part_id, increase_quantity):
+        if increase_quantity <= 0:
+            return
+        lot = (
+            PartLot.query.join(Invoice, Invoice.id == PartLot.invoice_id)
+            .where(
+                PartLot.part_id == part_id,
+                Invoice.status == InvoiceStatuses.PUBLISHED,
+                Invoice.type != InvoiceTypes.EXPENSE,
+            )
+            .order_by(PartLot.created_at.asc())
+            .first()
+        )
+        lot.quantity += increase_quantity
+
 
 class ProductUnit(Base):
     __tablename__ = "product_unit"
@@ -199,6 +236,7 @@ class ProductUnit(Base):
 class ProductLot(Base, LotBase):
     __tablename__ = "product_lot"
 
+    const_quantity: Mapped[Optional[int]] = mapped_column(default=1)
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
@@ -218,6 +256,7 @@ class ProductLot(Base, LotBase):
 class ContainerLot(Base, LotBase):
     __tablename__ = "container_lot"
 
+    const_quantity: Mapped[Optional[int]] = mapped_column(default=1)
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
@@ -234,6 +273,7 @@ class ContainerLot(Base, LotBase):
 class PartLot(Base, LotBase):
     __tablename__ = "part_lot"
 
+    const_quantity: Mapped[Optional[int]] = mapped_column(default=1)
     quantity: Mapped[int] = mapped_column(default=1)
     price: Mapped[float] = mapped_column(Float(decimal_return_scale=2))
     total_sum: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))

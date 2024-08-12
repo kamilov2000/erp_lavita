@@ -4,7 +4,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
-from app.product.models import Container
+from app.invoice.models import Invoice
+from app.product.models import Container, ContainerLot
 from app.product.schema import (
     PagContainerSchema,
     PhotoSchema,
@@ -31,6 +32,7 @@ class ContainerAllView(MethodView):
     def get(c, self, args, token):
         """List containers"""
         page = args.pop("page", 1)
+        warehouse_id = args.pop("warehouse_id", None)
         try:
             limit = int(args.pop("limit", 10))
             if limit <= 0:
@@ -43,6 +45,12 @@ class ContainerAllView(MethodView):
             query = Container.query.filter_by(**args).order_by(
                 Container.created_at.desc()
             )
+            if warehouse_id:
+                query = (
+                    query.join(ContainerLot, ContainerLot.container_id == Container.id)
+                    .join(Invoice, Invoice.id == ContainerLot.invoice_id)
+                    .where(Invoice.warehouse_receiver_id == warehouse_id)
+                )
             total_count = query.count()
             total_pages = (total_count + limit - 1) // limit
             data = query.limit(limit).offset((page - 1) * limit).all()

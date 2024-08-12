@@ -11,6 +11,7 @@ from app.invoice.models import Invoice
 from app.invoice.schema import (
     InvoiceDetailSchema,
     InvoiceQueryArgSchema,
+    InvoiceQueryDraftSchema,
     PagProductionSchema,
     ProductUnitSchema,
     ProductionSchema,
@@ -74,12 +75,16 @@ class InvoiceAllView(MethodView):
     @token_required
     @production.arguments(ProductionSchema)
     @production.arguments(TokenSchema, location="headers")
+    @production.arguments(InvoiceQueryDraftSchema, location="query")
     @production.response(400, ResponseSchema)
     @production.response(201, ProductionSchema)
-    def post(c, self, new_data, token):
-        """Add a new published production"""
+    def post(c, self, new_data, token, is_draft):
+        """Add a new published/draft production"""
         try:
-            new_data.status = InvoiceStatuses.PUBLISHED
+            if is_draft:
+                new_data.status = InvoiceStatuses.DRAFT
+            else:
+                new_data.status = InvoiceStatuses.PUBLISHED
             new_data.type = InvoiceTypes.PRODUCTION
             new_data.user_id = c.id
             session.add(new_data)

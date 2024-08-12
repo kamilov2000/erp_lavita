@@ -505,6 +505,7 @@ class InvoiceDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceS
                     "quantity": 0,
                     "total_sum": 0.0,
                     "markups": [],
+                    "updated_at": lot.updated_at
                 }
             products[product_name]["quantity"] += lot.quantity
             products[product_name]["total_sum"] += lot.total_sum or 0.0
@@ -540,3 +541,7 @@ class InvoiceDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceS
             parts[part_name]["quantity"] += lot.quantity
             parts[part_name]["total_sum"] += lot.total_sum or 0.0
         return list(parts.values())
+
+
+class InvoiceQueryDraftSchema(ma.Schema):
+    draft = ma.fields.Bool(default=False, required=False)

@@ -10,6 +10,7 @@ from app.invoice.schema import (
     InvoiceDetailSchema,
     InvoiceQueryArgSchema,
     ExpenseSchema,
+    InvoiceQueryDraftSchema,
     PagExpenseSchema,
 )
 from app.base import session
@@ -68,12 +69,16 @@ class InvoiceAllView(MethodView):
     @token_required
     @expense.arguments(ExpenseSchema)
     @expense.arguments(TokenSchema, location="headers")
+    @expense.arguments(InvoiceQueryDraftSchema, location="query")
     @expense.response(400, ResponseSchema)
     @expense.response(201, ExpenseSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data, token, is_draft):
         """Add a new published expense"""
         try:
-            new_data.status = InvoiceStatuses.PUBLISHED
+            if is_draft:
+                new_data.status = InvoiceStatuses.DRAFT
+            else:
+                new_data.status = InvoiceStatuses.PUBLISHED
             new_data.type = InvoiceTypes.EXPENSE
             new_data.user_id = c.id
             session.add(new_data)

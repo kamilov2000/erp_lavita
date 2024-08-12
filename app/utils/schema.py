@@ -59,6 +59,7 @@ class BaseInvoiceSchema:
             + invoice.calc_part_lots_quantity()
             + invoice.calc_product_lots_quantity()
         )
+        data["const_quantity"] = data["quantity"]
         return data
 
     @staticmethod

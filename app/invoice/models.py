@@ -6,6 +6,7 @@ from typing import List, Optional, TYPE_CHECKING
 import enum
 from app.choices import InvoiceTypes, InvoiceStatuses
 from app.base import Base, session
+from app.utils.types import JSONEncodedDict, MutableDict
 
 if TYPE_CHECKING:
     from app.warehouse.models import Warehouse
@@ -109,6 +110,9 @@ class Invoice(Base, InvoiceBase):
         back_populates="invoice"
     )
     part_lots: Mapped[List["PartLot"]] = relationship(back_populates="invoice")
+    created_data: Mapped[Optional[dict[str, str]]] = mapped_column(
+        MutableDict.as_mutable(JSONEncodedDict)
+    )
 
 
 class InvoiceComment(Base):

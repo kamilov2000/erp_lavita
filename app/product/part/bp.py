@@ -4,7 +4,8 @@ from flask import current_app
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
-from app.product.models import Part
+from app.invoice.models import Invoice
+from app.product.models import Part, PartLot
 from app.product.schema import (
     PagPartSchema,
     PhotoSchema,
@@ -31,6 +32,7 @@ class PartAllView(MethodView):
     def get(c, self, args, token):
         """List parts"""
         page = args.pop("page", 1)
+        warehouse_id = args.pop("warehouse_id", None)
         try:
             limit = int(args.pop("limit", 10))
             if limit <= 0:
@@ -40,9 +42,13 @@ class PartAllView(MethodView):
         if limit <= 0:
             limit = 10
         try:
-            query = Part.query.filter_by(**args).order_by(
-                Part.created_at.desc()
-            )
+            query = Part.query.filter_by(**args).order_by(Part.created_at.desc())
+            if warehouse_id:
+                query = (
+                    query.join(PartLot, PartLot.part_id == Part.id)
+                    .join(Invoice, Invoice.id == PartLot.invoice_id)
+                    .where(Invoice.warehouse_receiver_id == warehouse_id)
+                )
             total_count = query.count()
             total_pages = (total_count + limit - 1) // limit
             data = query.limit(limit).offset((page - 1) * limit).all()

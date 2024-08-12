@@ -13,7 +13,7 @@ from app.invoice.schema import (
     TransferSchema,
 )
 from app.utils.exc import ItemNotFoundError
-from app.utils.func import hash_image_save, msg_response, token_required
+from app.utils.func import cancel_invoice, hash_image_save, msg_response, token_required
 from app.utils.schema import ResponseSchema, TokenSchema
 from app.base import session
 from .bp import invoice as invoice_bp
@@ -77,6 +77,25 @@ def register_add_comment_route(bp, route):
         return data
 
 
+def register_cancel_invoice_route(bp, route):
+    @bp.post(route)
+    @token_required
+    @bp.arguments(TokenSchema, location="headers")
+    @bp.response(400, ResponseSchema)
+    @bp.response(200, ResponseSchema)
+    def cancel_invoice_route(cur_user, token, invoice_id):
+        try:
+            invoice = Invoice.get_by_id(invoice_id)
+            cancel_invoice(invoice_id)
+            invoice.status = InvoiceStatuses.CANCELED
+            session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
+        return msg_response("Invoice Canceled Successfully")
+
+
 def register_publish_invoice_route(bp, route):
     @bp.post(route)
     @token_required
@@ -90,7 +109,7 @@ def register_publish_invoice_route(bp, route):
             return {
                 "ok": False,
                 "error": f"Not found by this id {invoice_id}",
-                "data": None
+                "data": None,
             }
         if invoice.status != InvoiceStatuses.DRAFT:
             return msg_response("Invoice should be in draft status to publish"), 400
@@ -168,6 +187,7 @@ def reg_invoice_routes():
         register_publish_invoice_route(bp, "/<invoice_id>/publish/")
         register_get_logs_route(bp, "/<invoice_id>/logs/")
         register_get_comments_route(bp, "/<invoice_id>/comments/")
+        register_cancel_invoice_route(bp, "/<invoice_id>/cancel/")
 
 
 reg_invoice_routes()
