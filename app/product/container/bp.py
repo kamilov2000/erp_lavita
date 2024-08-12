@@ -9,13 +9,16 @@ from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
 from app.product.models import Container, ContainerLot
 from app.product.schema import (
+    OneProductInvoiceStatsQuery,
     PagContainerSchema,
     PhotoSchema,
     ProductQueryArgSchema,
     ContainerSchema,
+    StandaloneProductInvoiceStats,
     StandaloneProductWarehouseStats,
 )
 from app.base import session
+from app.user.models import User
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
 from app.utils.schema import ResponseSchema, TokenSchema
@@ -196,3 +199,51 @@ def standalone_container_warehouse_stats(c, token, container_id):
         "warehouse_data": warehouse_data,
     }
     return response
+
+
+@container.get("/<container_id>/invoice-stats/")
+@token_required
+@container.arguments(TokenSchema, location="headers")
+@container.arguments(OneProductInvoiceStatsQuery, location="query")
+@container.response(200, StandaloneProductInvoiceStats(many=True))
+def standalone_container_invoice_stats(c, token, args, container_id):
+    status_filter = args.pop("status", None)
+    type_filter = args.pop("type", None)
+    user_id_filter = args.pop("user_id", None)
+    date_filter = args.pop("date", None)
+    query = (
+        session.query(
+            Invoice.id,
+            Invoice.number,
+            Invoice.status,
+            Invoice.type,
+            Invoice.created_at,
+            User.full_name.label("responsible"),
+            func.sum(ContainerLot.total_sum).label("container_total_sum"),
+            Invoice.price.label("invoice_total_sum"),
+        )
+        .join(ContainerLot, ContainerLot.invoice_id == Invoice.id)
+        .join(User, Invoice.user_id == User.id)
+        .filter(ContainerLot.container_id == container_id)
+    )
+
+    # Добавление фильтров
+    if status_filter:
+        query = query.filter(Invoice.status == status_filter)
+    if type_filter:
+        query = query.filter(Invoice.type == type_filter)
+    if user_id_filter:
+        query = query.filter(Invoice.user_id == user_id_filter)
+    if date_filter:
+        query = query.filter(func.date(Invoice.created_at) == date_filter)
+
+    invoices_with_container = query.group_by(
+        Invoice.id,
+        Invoice.number,
+        Invoice.status,
+        Invoice.type,
+        Invoice.created_at,
+        User.full_name,
+        Invoice.price,
+    ).all()
+    return invoices_with_container
