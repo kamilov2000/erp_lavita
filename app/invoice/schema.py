@@ -104,11 +104,34 @@ class ContainerLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     @staticmethod
     def get_container_name(obj):
         return obj.container.name
-
+        
+    
     @ma.post_load
     def calc_price(self, data, **kwargs):
+        
         quantity = data.get("quantity")
-        data["total_sum"] = quantity * data.get("price")
+        container_id = data.get("container_id")
+        if data.get("price") is not None:
+            data["total_sum"] = quantity * data.get("price")
+        else:
+            container = (
+                session.query(Container)
+                .options(joinedload(Container.parts_r))
+                .get(container_id)
+            )
+            if not container:
+                raise ItemNotFoundError("Container not found")
+            total_cost = 0.0
+            for container_part in container.parts_r:
+                required_quantity = container_part.quantity * quantity
+                cost = PartLot.calculate_fifo_cost(
+                    PartLot.part_id == container_part.part_id,
+                    required_quantity,
+                    container_part.part_id,
+                )
+                total_cost += cost
+            data["price"] = total_cost / quantity if quantity else 0.0
+            data["total_sum"] = total_cost
         return data
 
 
