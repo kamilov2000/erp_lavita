@@ -7,7 +7,9 @@ from app.utils.schema import PaginationSchema
 
 
 class FilterQueryArgSchema(ma.Schema):
-    pass
+    page = ma.fields.Int(default=1)
+    limit = ma.fields.Int(default=1)
+    is_active = ma.fields.Bool(required=False)
 
 
 class MarkupSchema(SQLAlchemyAutoSchema):

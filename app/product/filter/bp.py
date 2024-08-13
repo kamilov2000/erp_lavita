@@ -10,6 +10,7 @@ from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
 from app.product.filter.schema import (
     FileMarkupFilter,
+    FilterQueryArgSchema,
     MarkupFilterDetailSchema,
     MarkupFilterLoadSchema,
     MarkupFilterUpdateSchema,
@@ -26,9 +27,9 @@ filter = Blueprint(
 
 
 @filter.route("/")
-class PartAllView(MethodView):
+class MarkupFilterAllView(MethodView):
     @token_required
-    # @filter.arguments(FilterQueryArgSchema, location="query")
+    @filter.arguments(FilterQueryArgSchema, location="query")
     @filter.arguments(TokenSchema, location="headers")
     @filter.response(200, PagMarkupFilterSchema)
     def get(c, self, args, token):
@@ -83,7 +84,7 @@ class PartAllView(MethodView):
 
 
 @filter.route("/<filter_id>/")
-class PartById(MethodView):
+class MarkupFilterById(MethodView):
     @token_required
     @filter.arguments(TokenSchema, location="headers")
     @filter.response(200, MarkupFilterDetailSchema)
