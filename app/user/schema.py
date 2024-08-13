@@ -1,5 +1,5 @@
 import marshmallow as ma
-from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, SQLAlchemySchema, auto_field
 
 from app.user.models import User
 from app.base import session
@@ -18,8 +18,19 @@ class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     @ma.pre_load
     def hash_password(self, in_data, **kwargs):
-        in_data["password"] = User.generate_password(in_data["password"])
+        if in_data.get("password"):
+            in_data["password"] = User.generate_password(in_data["password"])
         return in_data
+
+
+class UserUpdateSchema(SQLAlchemySchema):
+    class Meta:
+        model = User
+        include_fk = True
+
+    first_name = auto_field(required=False)
+    last_name = auto_field(required=False)
+    password = auto_field(required=False)
 
 
 class LoginSchema(ma.Schema):

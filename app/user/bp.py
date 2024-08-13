@@ -13,6 +13,7 @@ from app.user.schema import (
     PagUserSchema,
     UserQueryArgSchema,
     UserSchema,
+    UserUpdateSchema,
 )
 from app.base import session
 from app.utils.exc import ItemNotFoundError
@@ -91,7 +92,7 @@ class UserByIdView(MethodView):
         return user
 
     @token_required
-    @user.arguments(UserSchema)
+    @user.arguments(UserUpdateSchema)
     @user.arguments(TokenSchema, location="headers")
     @user.response(200, UserSchema)
     def patch(c, self, update_data, token, id):
@@ -100,7 +101,7 @@ class UserByIdView(MethodView):
         except ItemNotFoundError:
             abort(404, message="Item not found.")
         try:
-            UserSchema().load(update_data, session=session, instance=user)
+            UserSchema().load(update_data, instance=user, partial=True)
             session.commit()
         except SQLAlchemyError as e:
             current_app.logger.error(str(e.args))
