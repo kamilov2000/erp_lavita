@@ -7,6 +7,7 @@ from app.invoice.bp import invoice
 from app.invoice.expense.bp import expense
 from app.invoice.production.bp import production
 from app.invoice.transfer.bp import transfer
+from app.product.filter.bp import filter
 
 
 def reg_bps(app):
@@ -19,4 +20,5 @@ def reg_bps(app):
     app.register_blueprint(expense)
     app.register_blueprint(production)
     app.register_blueprint(transfer)
+    app.register_blueprint(filter)
     return app

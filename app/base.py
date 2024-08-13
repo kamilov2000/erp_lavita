@@ -98,7 +98,9 @@ class Base(DeclarativeBase):
             try:
                 ident = int(ident)
             except ValueError:
-                raise ItemNotFoundError(f"Not found {cls.__tablename__} with id: {ident}")
+                raise ItemNotFoundError(
+                    f"Not found {cls.__tablename__} with id: {ident}"
+                )
         res = cls.query.get(ident)
         if not res:
             raise ItemNotFoundError(f"Not found {cls.__tablename__} with id: {ident}")

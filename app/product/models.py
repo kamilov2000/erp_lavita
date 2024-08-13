@@ -1,13 +1,15 @@
-from sqlalchemy import Float, ForeignKey, Enum
+from sqlalchemy import Column, Float, ForeignKey, Enum, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 import enum
+import datetime as dt
 from app.choices import DebtTypes, InvoiceStatuses, InvoiceTypes, MeasumentTypes
 from app.base import Base, session
 from app.utils.exc import NotAvailableQuantity
 
 from app.invoice.models import Invoice
+
 # if TYPE_CHECKING:
 
 
@@ -318,3 +320,37 @@ class ContainerPart(Base):
     part_id: Mapped[int] = mapped_column(ForeignKey("part.id", ondelete="CASCADE"))
     part: Mapped["Part"] = relationship()
     quantity: Mapped[int] = mapped_column(default=1)
+
+
+markup_markup_filter = Table(
+    "markup_markup_filter",
+    Base.metadata,
+    Column("markup_id", ForeignKey("markup.id"), primary_key=True),
+    Column("markup_filter_id", ForeignKey("markup_filter.id"), primary_key=True),
+)
+
+
+class Markup(Base):
+    __tablename__ = "markup"
+    id: Mapped[str] = mapped_column(primary_key=True)
+    is_used: Mapped[bool] = mapped_column(default=False)
+    date_of_use: Mapped[Optional[dt.datetime]]
+    filters: Mapped[List["MarkupFilter"]] = relationship(
+        back_populates="markups",
+        secondary="markup_markup_filter",
+        cascade="all",
+    )
+
+
+class MarkupFilter(Base):
+    __tablename__ = "markup_filter"
+    name: Mapped[str]
+    is_active: Mapped[bool] = mapped_column(default=True)
+    date_of_receive: Mapped[Optional[dt.datetime]]
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("product.id", ondelete="CASCADE")
+    )
+    product: Mapped["Product"] = relationship()
+    markups: Mapped[List["Markup"]] = relationship(
+        back_populates="filters", secondary="markup_markup_filter"
+    )
