@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime
 from typing import List
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 import marshmallow as ma
@@ -15,6 +16,7 @@ from app.invoice.models import (
 )
 from app.product.models import (
     ContainerLot,
+    Markup,
     Part,
     PartLot,
     Product,
@@ -22,7 +24,7 @@ from app.product.models import (
     ProductUnit,
     Container,
 )
-from app.utils.exc import ItemNotFoundError, NotRightQuantity
+from app.utils.exc import ItemNotFoundError, NotRightQuantity, ValidateError
 from app.utils.schema import BaseInvoiceSchema, DefaultDumpsSchema, PaginationSchema
 
 
@@ -85,6 +87,12 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         data["total_sum"] = total_cost
         if len(data["markups"]) != quantity:
             raise NotRightQuantity("Not right quantity and markups list of array")
+        exist_markups = Markup.query.where(Markup.id.in_(data["markups"])).all()
+        for ex_m in exist_markups:
+            if ex_m.is_used:
+                raise ValidateError("Markup is already used")
+            ex_m.is_used = True
+            ex_m.date_of_use = datetime.now()
         units_arr = [ProductUnit(id=markup) for markup in data["markups"]]
         data["units"] = units_arr
         return data
@@ -277,7 +285,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
                             product_id=product_id,
                             quantity=obj.get("quantity"),
                             price=obj.get("price"),
-                            units=obj.get("units")
+                            units=obj.get("units"),
                         )
                         lot.calc_total_sum()
                         product_lots.append(lot)
@@ -357,7 +365,10 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
 
                 # Create a new ProductLot
                 new_lot = ProductLot(
-                    quantity=total_quantity, price=price, product_id=product_id, units=units
+                    quantity=total_quantity,
+                    price=price,
+                    product_id=product_id,
+                    units=units,
                 )
                 new_lot.calc_total_sum()
                 new_lots.append(new_lot)
@@ -507,7 +518,7 @@ class InvoiceDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceS
                     "quantity": 0,
                     "total_sum": 0.0,
                     "markups": [],
-                    "updated_at": lot.updated_at
+                    "updated_at": lot.updated_at,
                 }
             products[product_name]["quantity"] += lot.quantity
             products[product_name]["total_sum"] += lot.total_sum or 0.0

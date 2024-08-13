@@ -20,3 +20,7 @@ class MarkupUniqueError(CustomError):
 
 class NotRightStatus(CustomError):
     pass
+
+
+class ValidateError(CustomError):
+    pass
