@@ -166,7 +166,7 @@ class ProductStatSchema(SQLAlchemySchema):
         model = Product
 
     id = auto_field()
-    type = ma.fields.Constant("product")
+    type = ma.fields.Constant("products")
     measurement = ma.fields.Enum(MeasumentTypes, by_value=True)
     photo = auto_field()
     name = auto_field()
@@ -205,7 +205,7 @@ class ContainerStatSchema(SQLAlchemySchema):
         model = Container
 
     id = auto_field()
-    type = ma.fields.Constant("container")
+    type = ma.fields.Constant("containers")
     measurement = ma.fields.Enum(MeasumentTypes, by_value=True)
     photo = auto_field()
     name = auto_field()
@@ -244,7 +244,7 @@ class PartStatSchema(SQLAlchemySchema):
         model = Part
 
     id = auto_field()
-    type = ma.fields.Constant("part")
+    type = ma.fields.Constant("parts")
     measurement = ma.fields.Enum(MeasumentTypes, by_value=True)
     photo = auto_field()
     name = auto_field()
