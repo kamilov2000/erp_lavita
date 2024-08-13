@@ -12,6 +12,7 @@ from app.product.filter.schema import (
     FileMarkupFilter,
     MarkupFilterDetailSchema,
     MarkupFilterLoadSchema,
+    MarkupFilterUpdateSchema,
     PagMarkupFilterSchema,
 )
 from app.product.models import Markup, MarkupFilter, ProductLot, ProductUnit
@@ -95,7 +96,7 @@ class PartById(MethodView):
         return item
 
     @token_required
-    @filter.arguments(MarkupFilterDetailSchema)
+    @filter.arguments(MarkupFilterUpdateSchema)
     @filter.arguments(TokenSchema, location="headers")
     @filter.response(200, MarkupFilterDetailSchema)
     def put(c, self, update_data, token, filter_id):

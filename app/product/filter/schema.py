@@ -41,6 +41,17 @@ class MarkupFilterLoadSchema(SQLAlchemySchema):
     date_of_receive = auto_field()
 
 
+class MarkupFilterUpdateSchema(SQLAlchemySchema):
+    class Meta:
+        model = MarkupFilter
+        include_fk = True
+        load_instance = True
+        sqla_session = session
+
+    name = auto_field()
+    date_of_receive = auto_field()
+
+
 class FileMarkupFilter(ma.Schema):
     file = ma.fields.Raw(type="string", format="binary")
 

@@ -7,7 +7,7 @@ alembic init migrations
 sqlalchemy.url = postgresql+psycopg2://myuser:mypassword@0.0.0.0:5432/mydb
 
 # then create migration
-alembic revision --autogenerate -m "Create a baseline migrations"
+alembic revision --autogenerate -m "adds markups and filters"
 
 # and upgrade
 
