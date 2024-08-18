@@ -117,3 +117,8 @@ class Base(DeclarativeBase):
 
 # for tbl in reversed(Base.metadata.sorted_tables):
 #     engine.execute(tbl.delete())
+
+
+def drop_db():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)

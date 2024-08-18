@@ -33,6 +33,8 @@ def register_update_photos_route(bp, route, response_schema):
         invoice = Invoice.get_by_id(invoice_id)
         photo_files = data.get("files")
         array = []
+        if not photo_files:
+            return msg_response("No files provided"), 400
         for p_file in photo_files:
             try:
                 is_photo = False

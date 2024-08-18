@@ -2,6 +2,7 @@ import logging
 import os
 from flask import Flask, jsonify, request, make_response, send_from_directory
 from flask_smorest import Api
+from app.base import drop_db
 from app.init_db import init_db
 from app.utils.exc import CustomError
 
@@ -55,5 +56,7 @@ def create_app():
     def download_file(name):
         path = os.path.abspath(app.config["UPLOAD_FOLDER"])
         return send_from_directory(path, name)
+
+    # drop_db()
 
     return app

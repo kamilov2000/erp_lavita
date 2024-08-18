@@ -42,6 +42,7 @@ class BaseInvoiceSchema:
         print("ITS POSt LOAD")
         current_app.logger.error(data)
         data.pop("product_unit_ids", [])
+        data.pop("additionalProp1", None)
         invoice = Invoice(**data)
         if "product_lots" in data:
             invoice.product_lots = data["product_lots"]

@@ -244,8 +244,8 @@ def standalone_product_warehouse_stats(c, token, product_id):
     total_quantity, total_sum = total_quantity_sum[0]
     warehouse_data = (
         session.query(
-            Warehouse.id,
-            Warehouse.name,
+            Warehouse.id.label("warehouse_id"),
+            Warehouse.name.label("warehouse_name"),
             func.sum(ProductLot.quantity).label("total_quantity"),
             func.sum(ProductLot.total_sum).label("total_sum"),
         )
@@ -281,13 +281,13 @@ def standalone_product_invoice_stats(c, token, args, product_id):
     date_filter = args.pop("date", None)
     query = (
         session.query(
-            Invoice.id,
-            Invoice.number,
-            Invoice.status,
-            Invoice.type,
-            Invoice.created_at,
-            User.full_name.label("responsible"),
-            func.sum(ProductLot.total_sum).label("product_total_sum"),
+            Invoice.id.label("invoice_id"),
+            Invoice.number.label("invoice_number"),
+            Invoice.status.label("invoice_status"),
+            Invoice.type.label("invoice_type"),
+            Invoice.created_at.label("invoice_created_at"),
+            func.concat(User.last_name, " ", User.first_name).label("user_full_name"),
+            func.sum(ProductLot.total_sum).label("product_sum"),
             Invoice.price.label("invoice_total_sum"),
         )
         .join(ProductLot, ProductLot.invoice_id == Invoice.id)
@@ -311,7 +311,8 @@ def standalone_product_invoice_stats(c, token, args, product_id):
         Invoice.status,
         Invoice.type,
         Invoice.created_at,
-        User.full_name,
+        func.concat(User.last_name, " ", User.first_name).label("responsible"),
         Invoice.price,
     ).all()
+    current_app.logger.error(invoices_with_product)
     return invoices_with_product

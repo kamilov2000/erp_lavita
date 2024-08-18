@@ -140,7 +140,7 @@ def add_markups_from_excel(c, token, data, filter_id):
         df = pd.read_excel(file, usecols=[0], names=["id"], engine="openpyxl")
     else:
         return msg_response("Unsupported file format"), 400
-    df = df.drop_duplicates()
+    df = df.drop_duplicates().dropna()
     markup_ids = df["id"].tolist()
 
     for markup_id in markup_ids:
