@@ -11,6 +11,7 @@ class FilterQueryArgSchema(ma.Schema):
     page = ma.fields.Int(default=1)
     limit = ma.fields.Int(default=1)
     is_active = ma.fields.Bool(required=False)
+    product_id = ma.fields.Int(required=False)
 
 
 class MarkupSchema(SQLAlchemyAutoSchema):
