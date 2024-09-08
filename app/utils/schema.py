@@ -20,6 +20,12 @@ class TokenSchema(ma.Schema):
         example="your_access_token_here",
     )
 
+class CounterpartyIdSchema(ma.Schema):
+    counterparty_id = ma.fields.Int(
+        data_key="counterparty_id",
+        required=True,
+        description="for attaching to Counterparty",
+    )
 
 class DefaultDumpsSchema:
 
@@ -34,7 +40,7 @@ class BaseInvoiceSchema:
     quantity = auto_field(dump_only=True)
     type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
-    files = ma.fields.Nested("FileSchema", many=True, dump_only=True)
+    files = ma.fields.Nested("CounterpartyIdSchema", many=True, dump_only=True)
     user_full_name = ma.fields.Method("get_user_full_name")
 
     @ma.post_load

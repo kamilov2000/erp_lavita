@@ -10,3 +10,4 @@ OPENAPI_SWAGGER_UI_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
 OPENAPI_REDOC_URL = "/redoc"
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 UPLOAD_FOLDER = "uploads"
+SCHEDULER_API_ENABLED = False

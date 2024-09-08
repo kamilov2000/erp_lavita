@@ -24,6 +24,22 @@ def msg_response(content, ok=True):
         return jsonify({"ok": False, "error": content, "data": None})
 
 
+def sql_exception_handler(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        try:
+            res = f(*args, **kwargs)
+        except (AttributeError, SQLAlchemyError) as e:
+            current_app.logger.error(str(e.args))
+            session.rollback()
+            return msg_response("Something went wrong", False), 400
+        finally:
+            session.close()
+        return res
+
+    return decorated
+
+
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -38,14 +54,17 @@ def token_required(f):
             )
             try:
                 current_user = session.execute(
-                    select(User).filter_by(id=data["public_id"])
+                    select(User).filter_by(id=data.get("public_id"))
                 ).scalar()
+                if not current_user:
+                    return msg_response("Invalid Token or No Such User!", False), 401
             except SQLAlchemyError as e:
                 current_app.logger.error(str(e.args))
                 session.rollback()
                 return msg_response("Something went wrong", False), 400
         except Exception as E:
             return jsonify({"message": str(E)}), 401
+
         return f(
             current_user, *args, **kwargs
         )  # вот здесь декоратор возврашает модель пользователя
@@ -54,7 +73,7 @@ def token_required(f):
 
 
 def hash_image_save(
-    uploaded_file, model_name: str, ident: int, allowed_extensions=None
+        uploaded_file, model_name: str, ident: int, allowed_extensions=None
 ):
     if uploaded_file is None:
         raise ItemNotFoundError
@@ -76,10 +95,10 @@ def hash_image_save(
     # if allowed_extensions is not None and extension.lower() not in allowed_extensions:
     #     raise CustomError("Not allowed extension!")
     hashed_filename = (
-        ident_str
-        + sha256(secured_filename.encode("utf-8")).hexdigest()
-        + "."
-        + extension
+            ident_str
+            + sha256(secured_filename.encode("utf-8")).hexdigest()
+            + "."
+            + extension
     )
     file_path = os.path.join(model_upload_path, hashed_filename)
     uploaded_file.save(file_path)

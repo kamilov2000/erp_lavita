@@ -1,3 +1,4 @@
+from app.finance.bp import finance
 from app.user.bp import user
 from app.product.bp import product
 from app.warehouse.bp import warehouse
@@ -21,4 +22,5 @@ def reg_bps(app):
     app.register_blueprint(production)
     app.register_blueprint(transfer)
     app.register_blueprint(filter)
+    app.register_blueprint(finance)
     return app
