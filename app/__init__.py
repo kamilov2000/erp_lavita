@@ -5,6 +5,7 @@ from flask_apscheduler import APScheduler
 import jwt
 from flask import Flask, jsonify, request, make_response, send_from_directory, current_app, g
 from flask_smorest import Api
+from app.base import drop_db
 from jwt import ExpiredSignatureError, InvalidTokenError
 
 from app.base import drop_db, session
@@ -13,6 +14,7 @@ from app.finance.models import Transaction, TransactionHistory
 from app.events import register_events
 from app.finance.system_balance_accounts import create_system_balance_accounts
 
+from app.base import drop_db
 from app.init_db import init_db
 from app.jobs import scheduled_auto_charge_task
 
