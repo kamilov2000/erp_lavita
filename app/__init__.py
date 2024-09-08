@@ -1,23 +1,27 @@
 import logging
 import os
 
-from flask_apscheduler import APScheduler
 import jwt
-from flask import Flask, jsonify, request, make_response, send_from_directory, current_app, g
+from flask import (
+    Flask,
+    current_app,
+    g,
+    jsonify,
+    make_response,
+    request,
+    send_from_directory,
+)
+from flask_apscheduler import APScheduler
 from flask_smorest import Api
-from app.base import drop_db
 from jwt import ExpiredSignatureError, InvalidTokenError
 
 from app.base import drop_db, session
 from app.choices import CrudOperations
-from app.finance.models import Transaction, TransactionHistory
 from app.events import register_events
+from app.finance.models import Transaction, TransactionHistory
 from app.finance.system_balance_accounts import create_system_balance_accounts
-
-from app.base import drop_db
 from app.init_db import init_db
 from app.jobs import scheduled_auto_charge_task
-
 from app.user.models import User
 from app.utils.exc import CustomError
 
@@ -33,11 +37,13 @@ def create_app():
         with app.app_context():
             scheduled_auto_charge_task()
 
-    if not scheduler.get_job('auto_charge_job'):
+    if not scheduler.get_job("auto_charge_job"):
         scheduler.add_job(
-            id='auto_charge_job',
+            id="auto_charge_job",
             func=sync_with_main,
-            trigger='cron', minute='0', hour='0'
+            trigger="cron",
+            minute="0",
+            hour="0",
         )
 
     if not scheduler.running:
@@ -90,7 +96,9 @@ def create_app():
         token = request.headers.get("x-access-token")
         if token:
             try:
-                data = jwt.decode(token, current_app.config.get("SECRET_KEY"), algorithms=["HS256"])
+                data = jwt.decode(
+                    token, current_app.config.get("SECRET_KEY"), algorithms=["HS256"]
+                )
                 user_id = data["public_id"]
                 g.user = User.query.get(user_id)
             except (ExpiredSignatureError, InvalidTokenError) as e:

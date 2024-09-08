@@ -1,25 +1,56 @@
 from flask import jsonify, request
 from flask.views import MethodView
 from flask_smorest import Blueprint
-from sqlalchemy import or_, func
+from sqlalchemy import func, or_
 
-from app import scheduler
 from app.base import session
-from app.choices import Statuses, AccountCategories
-from app.finance.models import PaymentType, CashRegister, Counterparty, BalanceAccount, Transaction, \
-    TransactionComment, AttachedFile, TaxRate
-from app.finance.schema import PagPaymentTypeSchema, ByNameSearchSchema, \
-    PaymentTypeCreateSchema, PaymentTypeRetrieveUpdateSchema, CashRegisterCreateSchema, PagCashRegisterSchema, \
-    CashRegisterRetrieveSchema, CashRegisterUpdateSchema, PagBalanceAccountSchema, BalanceAccountCreateSchema, \
-    ByNameAndCategorySearchSchema, BalanceAccountRetrieveSchema, BalanceAccountUpdateSchema, TransactionArgsSchema, \
-    PagTransactionSchema, TransactionCreateUpdateSchema, TransactionRetrieveSchema, TransactionCommentSchema, \
-    CounterpartySchema, CounterpartyListSchema, CounterpartyArgsSchema, PagCounterpartySchema, \
-    CounterpartyRetrieveSchema, AttachedFileSchema, TaxRateCreateSchema, PagTaxRateSchema, TaxRateArgsSchema, \
-    TaxRateRetrieveSchema, TaxRateUpdateSchema, CounterpartyUpdateSchema, CounterpartyForTransaction
+from app.choices import AccountCategories, Statuses
+from app.finance.models import (
+    AttachedFile,
+    BalanceAccount,
+    CashRegister,
+    Counterparty,
+    PaymentType,
+    TaxRate,
+    Transaction,
+    TransactionComment,
+)
+from app.finance.schema import (
+    AttachedFileSchema,
+    BalanceAccountCreateSchema,
+    BalanceAccountRetrieveSchema,
+    BalanceAccountUpdateSchema,
+    ByNameAndCategorySearchSchema,
+    ByNameSearchSchema,
+    CashRegisterCreateSchema,
+    CashRegisterRetrieveSchema,
+    CashRegisterUpdateSchema,
+    CounterpartyArgsSchema,
+    CounterpartyForTransaction,
+    CounterpartyRetrieveSchema,
+    CounterpartySchema,
+    CounterpartyUpdateSchema,
+    PagBalanceAccountSchema,
+    PagCashRegisterSchema,
+    PagCounterpartySchema,
+    PagPaymentTypeSchema,
+    PagTaxRateSchema,
+    PagTransactionSchema,
+    PaymentTypeCreateSchema,
+    PaymentTypeRetrieveUpdateSchema,
+    TaxRateArgsSchema,
+    TaxRateCreateSchema,
+    TaxRateRetrieveSchema,
+    TaxRateUpdateSchema,
+    TransactionArgsSchema,
+    TransactionCommentSchema,
+    TransactionCreateUpdateSchema,
+    TransactionRetrieveSchema,
+)
 from app.finance.utils import TRANSACTION_DEBIT_CREDIT_CATEGORIES
+from app.utils.func import hash_image_save, sql_exception_handler, token_required
 from app.utils.mixins import CustomMethodPaginationView
-from app.utils.func import token_required, sql_exception_handler, hash_image_save
-from app.utils.schema import ResponseSchema, TokenSchema, CounterpartyIdSchema
+from app.utils.schema import CounterpartyIdSchema, ResponseSchema, TokenSchema
 
 finance = Blueprint(
     "finance", __name__, url_prefix="/finance", description="operations on finance"
@@ -82,7 +113,7 @@ class PaymentTypeByIdView(MethodView):
         item = PaymentType.get_or_404(id)
 
         item.create_counterparty()
-        item.update_counterparty(update_data.get('name'))
+        item.update_counterparty(update_data.get("name"))
         for col, val in update_data.items():
             setattr(item, col, val)
         session.merge(item)
@@ -114,7 +145,9 @@ class CashRegisterView(CustomMethodPaginationView):
     def post(c, self, new_data, token):
         """Add a new cash_register"""
         payment_types_ids = new_data.pop("payment_types_ids")
-        payment_types = PaymentType.query.filter(PaymentType.id.in_(payment_types_ids)).all()
+        payment_types = PaymentType.query.filter(
+            PaymentType.id.in_(payment_types_ids)
+        ).all()
         new_data["payment_types"] = payment_types
 
         cash_register = CashRegister(**new_data)
@@ -154,7 +187,9 @@ class CashRegisterByIdView(MethodView):
     def put(c, self, update_data, token, id):
         """Update existing cash_register"""
         payment_types_ids = update_data.pop("payment_types_ids", None)
-        payment_types = PaymentType.query.filter(PaymentType.id.in_(payment_types_ids)).all()
+        payment_types = PaymentType.query.filter(
+            PaymentType.id.in_(payment_types_ids)
+        ).all()
         update_data["payment_types"] = payment_types
         item = CashRegister.get_or_404(id)
 
@@ -235,7 +270,14 @@ class BalanceAccountByIdView(MethodView):
 
         item = BalanceAccount.get_or_404(id)
         if item.category == AccountCategories.SYSTEM:
-            return jsonify({"message": "You can not edit BalanceAccount with category == SYSTEM!"}), 403
+            return (
+                jsonify(
+                    {
+                        "message": "You can not edit BalanceAccount with category == SYSTEM!"
+                    }
+                ),
+                403,
+            )
 
         for col, val in update_data.items():
             setattr(item, col, val)
@@ -251,7 +293,14 @@ class BalanceAccountByIdView(MethodView):
         """Delete balance_account"""
         item = BalanceAccount.get_or_404(id)
         if item.category == AccountCategories.SYSTEM:
-            return jsonify({"message": "You can not delete BalanceAccount with category == SYSTEM!"}), 400
+            return (
+                jsonify(
+                    {
+                        "message": "You can not delete BalanceAccount with category == SYSTEM!"
+                    }
+                ),
+                400,
+            )
         session.delete(item)
         session.commit()
 
@@ -276,7 +325,7 @@ class TransactionView(CustomMethodPaginationView):
 
         search_term: str = args.pop("search", None)
         created_date = args.pop("created_date", None)
-        status = args.pop('status', None)
+        status = args.pop("status", None)
         category_name = args.pop("category_name", None)
         category_object_id = args.pop("category_object_id", None)
         custom_query = None
@@ -290,26 +339,24 @@ class TransactionView(CustomMethodPaginationView):
             )
 
         if created_date:
-            lst.append(
-                func.date(self.model.created_at) == created_date
-            )
+            lst.append(func.date(self.model.created_at) == created_date)
         if status:
-            lst.append(
-                self.model.status == status
-            )
+            lst.append(self.model.status == status)
         if category_name and category_object_id:
             custom_query = Transaction.query.filter(
                 or_(
                     Transaction.debit_content_type == category_name,
-                    Transaction.credit_content_type == category_name
+                    Transaction.credit_content_type == category_name,
                 )
             ).filter(
                 or_(
                     Transaction.debit_object_id == category_object_id,
-                    Transaction.credit_object_id == category_object_id
+                    Transaction.credit_object_id == category_object_id,
                 )
             )
-        return super(TransactionView, self).get(args, token, query_args=lst, custom_query=custom_query)
+        return super(TransactionView, self).get(
+            args, token, query_args=lst, custom_query=custom_query
+        )
 
     @token_required
     @sql_exception_handler
@@ -321,8 +368,16 @@ class TransactionView(CustomMethodPaginationView):
         """Add a new transaction"""
         new_data["credit_content_type"] = new_data.pop("credit_category")
         new_data["debit_content_type"] = new_data.pop("debit_category")
-        credit_name = session.query(globals()[new_data["credit_content_type"]]).get(new_data["credit_object_id"]).name
-        debit_name = session.query(globals()[new_data["debit_content_type"]]).get(new_data["debit_object_id"]).name
+        credit_name = (
+            session.query(globals()[new_data["credit_content_type"]])
+            .get(new_data["credit_object_id"])
+            .name
+        )
+        debit_name = (
+            session.query(globals()[new_data["debit_content_type"]])
+            .get(new_data["debit_object_id"])
+            .name
+        )
         transaction = Transaction(
             **new_data,
             category=AccountCategories.USER,
@@ -360,9 +415,11 @@ def cancel_transaction(c, id):
     item.cancel()
 
     session.commit()
-    return jsonify({
-        "message": "success",
-    })
+    return jsonify(
+        {
+            "message": "success",
+        }
+    )
 
 
 @finance.route("/transaction/<int:id>")
@@ -390,7 +447,14 @@ class TransactionByIdView(MethodView):
         update_data["credit_content_type"] = update_data.pop("credit_category")
         update_data["debit_content_type"] = update_data.pop("debit_category")
         if not item.can_edit:
-            return jsonify({"message": "You can not edit transaction with status <PUBLISHED or CANCELLED>!"}), 400
+            return (
+                jsonify(
+                    {
+                        "message": "You can not edit transaction with status <PUBLISHED or CANCELLED>!"
+                    }
+                ),
+                400,
+            )
         for col, val in update_data.items():
             setattr(item, col, val)
         item.publish()
@@ -405,10 +469,18 @@ class TransactionByIdView(MethodView):
 @finance.response(201, TransactionCommentSchema)
 @sql_exception_handler
 @token_required
-def create_comment(c, new_data, transaction_id, ):
+def create_comment(
+    c,
+    new_data,
+    transaction_id,
+):
     """Create Comment For Transaction"""
-    item = TransactionComment(**new_data, transaction_id=transaction_id,
-                              user_id=c.id, user_full_name=c.full_name)
+    item = TransactionComment(
+        **new_data,
+        transaction_id=transaction_id,
+        user_id=c.id,
+        user_full_name=c.full_name,
+    )
 
     session.add(item)
     session.commit()
@@ -429,17 +501,13 @@ class CounterpartyView(CustomMethodPaginationView):
     def get(c, self, args, token):
         """get list counterparty"""
         created_date = args.pop("created_date", None)
-        category = args.pop('category', None)
+        category = args.pop("category", None)
         lst = []
 
         if created_date:
-            lst.append(
-                func.date(self.model.created_at) == created_date
-            )
+            lst.append(func.date(self.model.created_at) == created_date)
         if category:
-            lst.append(
-                self.model.category == category
-            )
+            lst.append(self.model.category == category)
 
         return super(CounterpartyView, self).get(args, token, query_args=lst)
 
@@ -479,7 +547,12 @@ class CounterPartyByIdView(MethodView):
 
         item = Counterparty.get_or_404(id)
         if not item.can_delete_and_edit:
-            return jsonify({"message": "You can not edit counterparty with category <SYSTEM>!"}), 400
+            return (
+                jsonify(
+                    {"message": "You can not edit counterparty with category <SYSTEM>!"}
+                ),
+                400,
+            )
 
         for col, val in update_data.items():
             setattr(item, col, val)
@@ -499,7 +572,14 @@ class CounterPartyByIdView(MethodView):
             session.delete(counterparty)
             session.commit()
         else:
-            return jsonify({"message": "You can not delete counterparty with category <SYSTEM>!"}), 400
+            return (
+                jsonify(
+                    {
+                        "message": "You can not delete counterparty with category <SYSTEM>!"
+                    }
+                ),
+                400,
+            )
 
 
 @finance.route("/attached_file/<int:attached_file_id>/")
@@ -508,27 +588,26 @@ class AttachedFileView(MethodView):
     @sql_exception_handler
     @finance.arguments(TokenSchema, location="headers")
     @finance.arguments(CounterpartyIdSchema, location="query")
-    @finance.arguments(AttachedFileSchema, location='form')
+    @finance.arguments(AttachedFileSchema, location="form")
     @finance.response(400, ResponseSchema)
     @finance.response(200, AttachedFileSchema)
     @token_required
     def put(c, self, token, args, update_data, attached_file_id):
+        """update file for counter_party
+
+        ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов через 'multipart/form-data'.
+        Для отправки файла используйте Postman или другой инструмент, поддерживающий отправку файлов через форму.
+        Обязательно передавайте файл в поле 'file', и укажите остальные параметры, такие как 'filename' и 'description'.
+        """
         file = request.files.get("file", None)
         if not file:
             return jsonify({"message": "file field is required!"}), 400
-        counterparty_id = args.get('counterparty_id')
-        """update file for counter_party
-        
-           ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов через 'multipart/form-data'. 
-           Для отправки файла используйте Postman или другой инструмент, поддерживающий отправку файлов через форму. 
-           Обязательно передавайте файл в поле 'file', и укажите остальные параметры, такие как 'filename' и 'description'.
-        """
+        counterparty_id = args.get("counterparty_id")
+
         path = hash_image_save(
-            uploaded_file=file,
-            model_name="counterparty",
-            ident=counterparty_id
+            uploaded_file=file, model_name="counterparty", ident=counterparty_id
         )
-        update_data['filepath'] = path
+        update_data["filepath"] = path
         file = AttachedFile.get_or_404(attached_file_id)
 
         for col, val in update_data.items():
@@ -547,11 +626,11 @@ class AttachedFileView(MethodView):
         AttachedFile.delete_with_get(attached_file_id)
 
 
-@finance.post('/attached_file')
+@finance.post("/attached_file")
 @token_required
 @sql_exception_handler
 @finance.arguments(CounterpartyIdSchema, location="query")
-@finance.arguments(AttachedFileSchema, location='form')
+@finance.arguments(AttachedFileSchema, location="form")
 @finance.arguments(TokenSchema, location="headers")
 def create_attach_file(c, args, new_data, token):
     """
@@ -564,11 +643,9 @@ def create_attach_file(c, args, new_data, token):
     file = request.files.get("file", None)
     if not file:
         return jsonify({"message": "file field is required!"}), 400
-    counterparty_id = args.get('counterparty_id')
+    counterparty_id = args.get("counterparty_id")
     path = hash_image_save(
-        uploaded_file=file,
-        model_name="counterparty",
-        ident=counterparty_id
+        uploaded_file=file, model_name="counterparty", ident=counterparty_id
     )
     item = AttachedFile(**new_data, filepath=path, counterparty_id=counterparty_id)
 
@@ -590,17 +667,13 @@ class TaxRateView(CustomMethodPaginationView):
     def get(c, self, args, token):
         """get list tax_rate"""
         created_date = args.pop("created_date", None)
-        category = args.pop('category', None)
+        category = args.pop("category", None)
         lst = []
 
         if created_date:
-            lst.append(
-                func.date(self.model.created_at) == created_date
-            )
+            lst.append(func.date(self.model.created_at) == created_date)
         if category:
-            lst.append(
-                self.model.category == category
-            )
+            lst.append(self.model.category == category)
 
         return super(TaxRateView, self).get(args, token, query_args=lst)
 
@@ -613,7 +686,9 @@ class TaxRateView(CustomMethodPaginationView):
     def post(c, self, new_data, token):
         """Add a new tax_rate"""
         payment_types_ids = new_data.pop("payment_types_ids")
-        payment_types = PaymentType.query.filter(PaymentType.id.in_(payment_types_ids)).all()
+        payment_types = PaymentType.query.filter(
+            PaymentType.id.in_(payment_types_ids)
+        ).all()
         new_data["payment_types"] = payment_types
         tax_rate = TaxRate(**new_data)
         session.add(tax_rate)
@@ -645,7 +720,9 @@ class TaxRateIdView(MethodView):
         item = TaxRate.get_or_404(id)
 
         payment_types_ids = update_data.pop("payment_types_ids", None)
-        payment_types = PaymentType.query.filter(PaymentType.id.in_(payment_types_ids)).all()
+        payment_types = PaymentType.query.filter(
+            PaymentType.id.in_(payment_types_ids)
+        ).all()
         update_data["payment_types"] = payment_types
 
         item.update_counterparty(name=update_data.get("name"))
