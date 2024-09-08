@@ -14,6 +14,7 @@ from app.product.filter.schema import (
     MarkupFilterDetailSchema,
     MarkupFilterLoadSchema,
     MarkupFilterUpdateSchema,
+    MarkupSchema,
     PagMarkupFilterSchema,
 )
 from app.product.models import Markup, MarkupFilter, ProductLot, ProductUnit
@@ -135,7 +136,9 @@ def add_markups_from_excel(c, token, data, filter_id):
         return msg_response("Invalid file input"), 400
     filename = secure_filename(file.filename)
     if filename.endswith(".csv"):
-        df = pd.read_csv(file, usecols=[0], names=["id"], encoding="utf-8")
+        df = pd.read_csv(
+            file, usecols=[0], names=["id"], encoding="utf-8", sep="\s+|;|:|,"
+        )
     elif filename.endswith(".xls") or filename.endswith(".xlsx"):
         df = pd.read_excel(file, usecols=[0], names=["id"], engine="openpyxl")
     else:
@@ -170,3 +173,14 @@ def add_markups_from_excel(c, token, data, filter_id):
 
     session.commit()
     return markup_filter
+
+
+@filter.get("/<filter_id>/unused-markups/")
+@token_required
+@filter.arguments(TokenSchema, location="headers")
+@filter.response(400, ResponseSchema)
+@filter.response(200, MarkupSchema(many=True))
+def detail_unused(c, token, filter_id):
+    MarkupFilter.get_by_id(filter_id)
+    res = MarkupFilter.get_unused_markups_by_filter_id(session, filter_id)
+    return res

@@ -354,3 +354,15 @@ class MarkupFilter(Base):
     markups: Mapped[List["Markup"]] = relationship(
         back_populates="filters", secondary="markup_markup_filter"
     )
+
+    @staticmethod
+    def get_unused_markups_by_filter_id(session, markup_filter_id: int):
+        return (
+            session.query(Markup)
+            .join(markup_markup_filter, Markup.id == markup_markup_filter.c.markup_id)
+            .filter(
+                markup_markup_filter.c.markup_filter_id == markup_filter_id,
+                Markup.is_used == False,
+            )
+            .all()
+        )

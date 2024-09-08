@@ -43,6 +43,7 @@ class ProductLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     invoice_id = auto_field(dump_only=True)
     total_sum = auto_field(dump_only=True)
     price = auto_field(dump_only=True)
+    const_quantity = auto_field(dump_only=True)
     product_name = ma.fields.Method("get_product_name")
     markups = ma.fields.List(ma.fields.Str())
 
@@ -107,6 +108,7 @@ class ContainerLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     invoice_id = auto_field(dump_only=True)
     total_sum = auto_field(dump_only=True)
+    const_quantity = auto_field(dump_only=True)
     container_name = ma.fields.Method("get_container_name")
 
     @staticmethod
@@ -151,6 +153,7 @@ class PartLotSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     invoice_id = auto_field(dump_only=True)
     total_sum = auto_field(dump_only=True)
+    const_quantity = auto_field(dump_only=True)
     part_name = ma.fields.Method("get_part_name")
 
     @staticmethod
@@ -172,6 +175,7 @@ class InvoiceQueryArgSchema(ma.Schema):
     warehouse_sender_id = ma.fields.Int(required=False)
     warehouse_receiver_id = ma.fields.Int(required=False)
     user_id = ma.fields.Int(required=False)
+    created_at = ma.fields.Date(required=False)
 
 
 class ProductUnitMoveWebSchema(ma.Schema):

@@ -57,7 +57,7 @@ def token_required(f):
                     select(User).filter_by(id=data.get("public_id"))
                 ).scalar()
                 if not current_user:
-                    return msg_response("Invalid Token or No Such User!", False), 401
+                    return jsonify({"message": "User not found !!"}), 401
             except SQLAlchemyError as e:
                 current_app.logger.error(str(e.args))
                 session.rollback()

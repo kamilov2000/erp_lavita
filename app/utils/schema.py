@@ -38,6 +38,7 @@ class BaseInvoiceSchema:
     user_id = auto_field(dump_only=True)
     price = auto_field(dump_only=True)
     quantity = auto_field(dump_only=True)
+    created_data = auto_field(dump_only=True)
     type = ma.fields.Enum(InvoiceTypes, by_value=True, dump_only=True)
     status = ma.fields.Enum(InvoiceStatuses, by_value=True, dump_only=True)
     files = ma.fields.Nested("CounterpartyIdSchema", many=True, dump_only=True)

@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from app.choices import InvoiceStatuses, InvoiceTypes
 from app.utils.func import msg_response, token_required
 from sqlalchemy.exc import SQLAlchemyError
@@ -33,6 +34,7 @@ class InvoiceAllView(MethodView):
     def get(c, self, args, token):
         """List invoices"""
         page = args.pop("page", 1)
+        created_at = args.pop("created_at", None)
         try:
             limit = int(args.pop("limit", 10))
             if limit <= 0:
@@ -46,6 +48,8 @@ class InvoiceAllView(MethodView):
             query = Invoice.query.filter_by(type=InvoiceTypes.INVOICE, **args).order_by(
                 Invoice.created_at.desc()
             )
+            if created_at:
+                query = query.where(func.date(Invoice.created_at) == created_at)
             if number:
                 query = query.filter(Invoice.number.ilike(f"%{number}%"))
             total_count = query.count()
