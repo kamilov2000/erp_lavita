@@ -1,34 +1,80 @@
 import marshmallow as ma
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, SQLAlchemySchema, auto_field
 
-from app.choices import Statuses
-from app.user.models import User, Department, Group
 from app.base import session
+from app.choices import SalaryFormat, Statuses
+from app.user.models import (
+    Department,
+    Document,
+    Group,
+    Permission,
+    SalaryCalculation,
+    User,
+)
 from app.utils.schema import DefaultDumpsSchema, PaginationSchema
 
 
+class SalaryCalculationSchema(DefaultDumpsSchema, SQLAlchemyAutoSchema):
+    salary_format = ma.fields.Enum(enum=SalaryFormat)
+
+    class Meta:
+        model = SalaryCalculation
+        exclude = ["created_at", "updated_at", "user_id"]
+
+
+class PermissionForUserSchema(DefaultDumpsSchema, SQLAlchemyAutoSchema):
+    class Meta:
+        model = Permission
+        exclude = ["created_at", "updated_at"]
+
+
 class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    salary_calculation = ma.fields.Nested(SalaryCalculationSchema())
+    status = ma.fields.Enum(enum=Statuses)
+    department_name = ma.fields.Method("get_department", dump_only=True)
+    permissions = ma.fields.Nested(PermissionForUserSchema())
+
     class Meta:
         model = User
-        include_fk = True
-        load_instance = True
-        sqla_session = session
+        fields = [
+            "id",
+            "last_name",
+            "first_name",
+            "role",
+            "phone_number",
+            "department_name",
+            "salary_calculation",
+            "password",
+            "username",
+            "permissions",
+        ]
 
     role = auto_field(dump_only=True)
     password = auto_field(load_only=True)
 
     @ma.pre_load
     def hash_password(self, in_data, **kwargs):
-        if in_data.get("password"):
+        # Проверяем, что in_data является словарём
+        if isinstance(in_data, dict) and in_data.get("password"):
             in_data["password"] = User.generate_password(in_data["password"])
         return in_data
+
+    def get_department(self, obj):
+        return obj.department.name if obj.department else None
 
 
 class UserListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     status = ma.fields.Enum(enum=Statuses)
+
     class Meta:
         model = User
-        fields = ["id", "full_name", "role", "status"]
+        fields = [
+            "id",
+            "full_name",
+            "role",
+            "status",
+            "is_accepted_to_system",
+        ]
 
 
 class UserUpdateSchema(SQLAlchemySchema):
@@ -136,6 +182,8 @@ class GroupListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class PagGroupSchema(ma.Schema):
     data = ma.fields.Nested(GroupListSchema(many=True))
     pagination = ma.fields.Nested(PaginationSchema)
+
+
 class GroupCreateSchema(ma.Schema):
     name = ma.fields.Str(required=True)
     user_ids = ma.fields.List(ma.fields.Int())
@@ -177,8 +225,43 @@ class GroupArgsSchema(ma.Schema):
 class UserCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     first_name = ma.fields.Str(required=True)
     last_name = ma.fields.Str(required=True)
-    phone = ma.fields.Str(required=True)
+    phone_number = ma.fields.Str(required=True)
+    department_id = ma.fields.Int()
+    group_id = ma.fields.Int()
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "id", "phone", "department_id", "group_id"]
+        fields = [
+            "first_name",
+            "last_name",
+            "id",
+            "phone_number",
+            "department_id",
+            "group_id",
+        ]
+
+
+class DocumentCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    filename = ma.fields.Str(required=True)
+    user_id = ma.fields.Int(required=True)
+
+    class Meta:
+        model = Document
+        fields = ["filename", "description", "user_id"]
+
+
+class DocumentUpdateListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    filepath = ma.fields.Str(dump_only=True)
+    user_id = ma.fields.Int(load_only=True)
+
+    class Meta:
+        model = Document
+        fields = ["filename", "filepath", "description", "user_id", "id"]
+
+
+class UserIdSchema(ma.Schema):
+    counterparty_id = ma.fields.Int(
+        data_key="user_id",
+        required=True,
+        description="for attaching to User",
+    )

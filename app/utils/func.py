@@ -1,19 +1,19 @@
 import datetime
+import os
 from functools import wraps
 from hashlib import sha256
-import os
-from flask import current_app, jsonify, request
+
 import jwt
+from flask import current_app, jsonify, request
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 
+from app.base import session
 from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
-from app.product.models import Part
-from app.product.models import Container
+from app.product.models import Container, Part
 from app.user.models import User
-from app.base import session
 from app.utils.exc import ItemNotFoundError
 
 
@@ -72,8 +72,21 @@ def token_required(f):
     return decorated
 
 
+def accept_to_system_permission(f):
+    @wraps(f)
+    def decorated(c, *args, **kwargs):
+        if not c.is_accepted_to_system:
+            return msg_response("You do not have permission to enter the system!"), 403
+
+        return f(
+            c, *args, **kwargs
+        )  # вот здесь декоратор возврашает модель пользователя
+
+    return decorated
+
+
 def hash_image_save(
-        uploaded_file, model_name: str, ident: int, allowed_extensions=None
+    uploaded_file, model_name: str, ident: int, allowed_extensions=None
 ):
     if uploaded_file is None:
         raise ItemNotFoundError
@@ -95,10 +108,10 @@ def hash_image_save(
     # if allowed_extensions is not None and extension.lower() not in allowed_extensions:
     #     raise CustomError("Not allowed extension!")
     hashed_filename = (
-            ident_str
-            + sha256(secured_filename.encode("utf-8")).hexdigest()
-            + "."
-            + extension
+        ident_str
+        + sha256(secured_filename.encode("utf-8")).hexdigest()
+        + "."
+        + extension
     )
     file_path = os.path.join(model_upload_path, hashed_filename)
     uploaded_file.save(file_path)

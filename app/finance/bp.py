@@ -27,6 +27,7 @@ from app.finance.schema import (
     CashRegisterUpdateSchema,
     CounterpartyArgsSchema,
     CounterpartyForTransaction,
+    CounterpartyIdSchema,
     CounterpartyRetrieveSchema,
     CounterpartySchema,
     CounterpartyUpdateSchema,
@@ -50,7 +51,7 @@ from app.finance.schema import (
 from app.finance.utils import TRANSACTION_DEBIT_CREDIT_CATEGORIES
 from app.utils.func import hash_image_save, sql_exception_handler, token_required
 from app.utils.mixins import CustomMethodPaginationView
-from app.utils.schema import CounterpartyIdSchema, ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema, TokenSchema
 
 finance = Blueprint(
     "finance", __name__, url_prefix="/finance", description="operations on finance"
@@ -61,7 +62,6 @@ finance = Blueprint(
 class PaymentTypeView(CustomMethodPaginationView):
     model = PaymentType
 
-    @sql_exception_handler
     @finance.arguments(ByNameSearchSchema, location="query")
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
@@ -93,7 +93,6 @@ class PaymentTypeView(CustomMethodPaginationView):
 @finance.route("/payment_type/<int:id>")
 class PaymentTypeByIdView(MethodView):
     @token_required
-    @sql_exception_handler
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, PaymentTypeRetrieveUpdateSchema)
     def get(c, self, token, id):
@@ -156,7 +155,6 @@ class CashRegisterView(CustomMethodPaginationView):
         schema = CashRegisterCreateSchema()
         return schema.dump(cash_register), 201
 
-    @sql_exception_handler
     @finance.arguments(ByNameSearchSchema, location="query")
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
@@ -170,7 +168,6 @@ class CashRegisterView(CustomMethodPaginationView):
 @finance.route("/cash_register/<int:id>")
 class CashRegisterByIdView(MethodView):
     @token_required
-    @sql_exception_handler
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, CashRegisterRetrieveSchema)
     def get(c, self, token, id):
@@ -217,7 +214,6 @@ class CashRegisterByIdView(MethodView):
 class BalanceAccountView(CustomMethodPaginationView):
     model = BalanceAccount
 
-    @sql_exception_handler
     @finance.arguments(ByNameAndCategorySearchSchema, location="query")
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
@@ -250,7 +246,6 @@ class BalanceAccountView(CustomMethodPaginationView):
 @finance.route("/balance_account/<int:id>")
 class BalanceAccountByIdView(MethodView):
     @token_required
-    @sql_exception_handler
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, BalanceAccountRetrieveSchema)
     def get(c, self, token, id):
@@ -314,7 +309,6 @@ def get_transaction_categories():
 class TransactionView(CustomMethodPaginationView):
     model = Transaction
 
-    @sql_exception_handler
     @finance.arguments(TransactionArgsSchema, location="query")
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
@@ -392,7 +386,6 @@ class TransactionView(CustomMethodPaginationView):
 
 
 @finance.get("/get_counterparties_for_transaction")
-@sql_exception_handler
 def get_counterparties_for_transaction():
     """Get Counterparties with status == ON For Transaction
     when assigning Credit or Debit
@@ -425,7 +418,6 @@ def cancel_transaction(c, id):
 @finance.route("/transaction/<int:id>")
 class TransactionByIdView(MethodView):
     @token_required
-    @sql_exception_handler
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, TransactionRetrieveSchema)
     def get(c, self, token, id):
@@ -492,7 +484,6 @@ def create_comment(
 class CounterpartyView(CustomMethodPaginationView):
     model = Counterparty
 
-    @sql_exception_handler
     @finance.arguments(CounterpartyArgsSchema, location="query")
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
@@ -528,7 +519,6 @@ class CounterpartyView(CustomMethodPaginationView):
 @finance.route("/counterparty/<int:id>")
 class CounterPartyByIdView(MethodView):
     @token_required
-    @sql_exception_handler
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, CounterpartyRetrieveSchema)
     def get(c, self, token, id):
@@ -582,17 +572,25 @@ class CounterPartyByIdView(MethodView):
             )
 
 
-@finance.route("/attached_file/<int:attached_file_id>/")
+@finance.route("/attached_file/<int:id>/")
 class AttachedFileView(MethodView):
+
+    @finance.arguments(TokenSchema, location="headers")
+    @finance.response(400, ResponseSchema)
+    @finance.response(200, AttachedFileSchema)
+    @token_required
+    def get(c, self, token, id):
+
+        documents = AttachedFile.get_or_404(id)
+        return documents
 
     @sql_exception_handler
     @finance.arguments(TokenSchema, location="headers")
-    @finance.arguments(CounterpartyIdSchema, location="query")
     @finance.arguments(AttachedFileSchema, location="form")
     @finance.response(400, ResponseSchema)
     @finance.response(200, AttachedFileSchema)
     @token_required
-    def put(c, self, token, args, update_data, attached_file_id):
+    def put(c, self, token, update_data, id):
         """update file for counter_party
 
         ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов через 'multipart/form-data'.
@@ -602,13 +600,13 @@ class AttachedFileView(MethodView):
         file = request.files.get("file", None)
         if not file:
             return jsonify({"message": "file field is required!"}), 400
-        counterparty_id = args.get("counterparty_id")
+        counterparty_id = update_data.get("counterparty_id")
 
         path = hash_image_save(
             uploaded_file=file, model_name="counterparty", ident=counterparty_id
         )
         update_data["filepath"] = path
-        file = AttachedFile.get_or_404(attached_file_id)
+        file = AttachedFile.get_or_404(id)
 
         for col, val in update_data.items():
             setattr(file, col, val)
@@ -621,18 +619,18 @@ class AttachedFileView(MethodView):
     @sql_exception_handler
     @finance.response(204)
     @finance.arguments(TokenSchema, location="headers")
-    def delete(c, self, token, attached_file_id):
+    def delete(c, self, token, id):
         """Delete attached_file"""
-        AttachedFile.delete_with_get(attached_file_id)
+        AttachedFile.delete_with_get(id)
 
 
 @finance.post("/attached_file")
 @token_required
 @sql_exception_handler
-@finance.arguments(CounterpartyIdSchema, location="query")
 @finance.arguments(AttachedFileSchema, location="form")
 @finance.arguments(TokenSchema, location="headers")
-def create_attach_file(c, args, new_data, token):
+@finance.response(200, AttachedFileSchema)
+def create_attach_file(c, new_data, token):
     """
     Add a new attached_file to a counterparty
 
@@ -643,11 +641,11 @@ def create_attach_file(c, args, new_data, token):
     file = request.files.get("file", None)
     if not file:
         return jsonify({"message": "file field is required!"}), 400
-    counterparty_id = args.get("counterparty_id")
+    counterparty_id = new_data.get("counterparty_id")
     path = hash_image_save(
         uploaded_file=file, model_name="counterparty", ident=counterparty_id
     )
-    item = AttachedFile(**new_data, filepath=path, counterparty_id=counterparty_id)
+    item = AttachedFile(**new_data, filepath=path)
 
     session.add(item)
     session.commit()
@@ -658,7 +656,6 @@ def create_attach_file(c, args, new_data, token):
 class TaxRateView(CustomMethodPaginationView):
     model = TaxRate
 
-    @sql_exception_handler
     @finance.arguments(TaxRateArgsSchema, location="query")
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
@@ -700,7 +697,6 @@ class TaxRateView(CustomMethodPaginationView):
 @finance.route("/tax_rate/<int:id>")
 class TaxRateIdView(MethodView):
     @token_required
-    @sql_exception_handler
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, TaxRateRetrieveSchema)
     def get(c, self, token, id):

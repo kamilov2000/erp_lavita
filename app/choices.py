@@ -29,6 +29,7 @@ class Statuses(Enum):
     ON = "on"
     OFF = "off"
 
+
 class TaxRateCategories(Enum):
     VAT = "vat"
     OTHER = "other"
@@ -61,3 +62,9 @@ class CreditDebitCategories(Enum):
 class CrudOperations(Enum):
     CREATED = "created"
     UPDATED = "updated"
+
+
+class SalaryFormat(Enum):
+    EMPLOYEE = "employee"
+    DRIVER = "driver"
+    SUPPORT_OPERATOR = "support_operator"

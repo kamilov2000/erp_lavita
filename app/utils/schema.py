@@ -1,5 +1,5 @@
-from flask import current_app
 import marshmallow as ma
+from flask import current_app
 from marshmallow_sqlalchemy import auto_field
 
 from app.choices import InvoiceStatuses, InvoiceTypes
@@ -20,12 +20,6 @@ class TokenSchema(ma.Schema):
         example="your_access_token_here",
     )
 
-class CounterpartyIdSchema(ma.Schema):
-    counterparty_id = ma.fields.Int(
-        data_key="counterparty_id",
-        required=True,
-        description="for attaching to Counterparty",
-    )
 
 class DefaultDumpsSchema:
 

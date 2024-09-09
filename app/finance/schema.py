@@ -1,12 +1,27 @@
-from marshmallow import validate, ValidationError
-from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 import marshmallow as ma
+from marshmallow import ValidationError, validate
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from werkzeug.datastructures import FileStorage
 
-from app.choices import Statuses, TaxRateCategories, AccountCategories, AccountTypes, TransactionStatuses
 from app import CrudOperations
-from app.finance.models import PaymentType, CashRegister, Transaction, BalanceAccount, CashRegisterHistory, \
-    TransactionHistory, TransactionComment, Counterparty, TaxRate
+from app.choices import (
+    AccountCategories,
+    AccountTypes,
+    Statuses,
+    TaxRateCategories,
+    TransactionStatuses,
+)
+from app.finance.models import (
+    BalanceAccount,
+    CashRegister,
+    CashRegisterHistory,
+    Counterparty,
+    PaymentType,
+    TaxRate,
+    Transaction,
+    TransactionComment,
+    TransactionHistory,
+)
 from app.finance.utils import CATEGORY_COLLECTION, CATEGORY_LIST, check_all_strs_is_nums
 from app.utils.schema import DefaultDumpsSchema, PaginationSchema
 
@@ -82,8 +97,12 @@ class PaymentTypeRetrieveUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 class CashRegisterCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     name = ma.fields.Str(required=True)
-    payment_types_ids = ma.fields.List(ma.fields.Int(), required=True, load_only=True,
-                                       validate=[validate.Length(min=1)])
+    payment_types_ids = ma.fields.List(
+        ma.fields.Int(),
+        required=True,
+        load_only=True,
+        validate=[validate.Length(min=1)],
+    )
 
     class Meta:
         model = CashRegister
@@ -139,8 +158,12 @@ class CashRegisterRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 class CashRegisterUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     name = ma.fields.Str(required=False)
-    payment_types_ids = ma.fields.List(ma.fields.Int(), required=False, load_only=True,
-                                       validate=[validate.Length(min=1)])
+    payment_types_ids = ma.fields.List(
+        ma.fields.Int(),
+        required=False,
+        load_only=True,
+        validate=[validate.Length(min=1)],
+    )
 
     class Meta:
         model = CashRegister
@@ -149,7 +172,9 @@ class CashRegisterUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 class BalanceAccountCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     name = ma.fields.Str(required=True)
-    code = ma.fields.Str(required=True, validate=[validate.Length(4), check_all_strs_is_nums])
+    code = ma.fields.Str(
+        required=True, validate=[validate.Length(4), check_all_strs_is_nums]
+    )
     account_type = ma.fields.Enum(required=True, enum=AccountTypes)
 
     class Meta:
@@ -216,7 +241,7 @@ class TransactionCreateUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "credit_object_id",
             "debit_object_id",
             "amount",
-            "status"
+            "status",
         ]
 
 
@@ -238,7 +263,7 @@ class TransactionListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "status",
             "credit_category",
             "debit_category",
-            "created_at"
+            "created_at",
         ]
 
     def get_number_transaction(self, obj):
@@ -297,7 +322,9 @@ class TransactionRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     def get_sorted_histories(self, obj):
         # Сортируем связанные объекты histories по created_at (в порядке убывания)
-        sorted_histories = sorted(obj.histories, key=lambda x: x.created_at, reverse=True)
+        sorted_histories = sorted(
+            obj.histories, key=lambda x: x.created_at, reverse=True
+        )
         return TransactionHistorySchema(many=True).dump(sorted_histories)
 
     def get_number_transaction(self, obj):
@@ -311,9 +338,7 @@ class TransactionRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 
 class FileField(ma.fields.Field):
-    default_error_messages = {
-        "invalid": "Not a valid file."
-    }
+    default_error_messages = {"invalid": "Not a valid file."}
 
     def _deserialize(self, value, attr, data, **kwargs):
         if value is None:
@@ -325,9 +350,14 @@ class FileField(ma.fields.Field):
 
 class AttachedFileSchema(ma.Schema):
     id = ma.fields.Int(dump_only=True)
-    filename = ma.fields.String(description='Name of the file', required=True)
-    description = ma.fields.String(description='Description of the file', required=True)
-    filepath = ma.fields.String(dump_only=True, description="Get a static file from url")
+    filename = ma.fields.String(description="Name of the file", required=True)
+    description = ma.fields.String(
+        description="Description of the file", required=False
+    )
+    filepath = ma.fields.String(
+        dump_only=True, description="Get a static file from url"
+    )
+    counterparty_id = ma.fields.Int(required=True)
 
 
 class CounterpartyForTransaction(ma.Schema):
@@ -337,15 +367,15 @@ class CounterpartyForTransaction(ma.Schema):
 
 class CounterpartySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     name = ma.fields.Str(required=True)
-    code = ma.fields.Str(required=True, validate=[validate.Length(4), check_all_strs_is_nums])
+    code = ma.fields.Str(
+        required=True, validate=[validate.Length(4), check_all_strs_is_nums]
+    )
     status = ma.fields.Enum(enum=Statuses, required=True)
     balance = ma.fields.Float(required=True)
 
     class Meta:
         model = Counterparty
-        fields = [
-            "name", "code", "status", "balance", "id"
-        ]
+        fields = ["name", "code", "status", "balance", "id"]
 
 
 class CounterpartyListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -355,7 +385,14 @@ class CounterpartyListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = Counterparty
         fields = [
-            "name", "code", "status", "balance", "id", "auto_charge", "category", "created_at"
+            "name",
+            "code",
+            "status",
+            "balance",
+            "id",
+            "auto_charge",
+            "category",
+            "created_at",
         ]
 
 
@@ -389,9 +426,25 @@ class CounterpartyRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = Counterparty
         fields = [
-            "name", "code", "status", "balance", "id", "auto_charge", "category", "created_at",
-            "address", "legal_name", "inn_or_pinfl", "mfo", "legal_address", "contact", "files",
-            "auto_charge", "charge_period_months", "charge_amount", "can_delete_and_edit",
+            "name",
+            "code",
+            "status",
+            "balance",
+            "id",
+            "auto_charge",
+            "category",
+            "created_at",
+            "address",
+            "legal_name",
+            "inn_or_pinfl",
+            "mfo",
+            "legal_address",
+            "contact",
+            "files",
+            "auto_charge",
+            "charge_period_months",
+            "charge_amount",
+            "can_delete_and_edit",
             "histories",
         ]
 
@@ -403,17 +456,29 @@ class CounterpartyUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = Counterparty
         fields = [
-            "name", "code", "status", "id", "auto_charge", "category"
-                                                           "address", "legal_name", "inn_or_pinfl", "mfo",
-            "legal_address", "contact",
-            "auto_charge", "charge_period_months", "charge_amount",
+            "name",
+            "code",
+            "status",
+            "id",
+            "auto_charge",
+            "category" "address",
+            "legal_name",
+            "inn_or_pinfl",
+            "mfo",
+            "legal_address",
+            "contact",
+            "auto_charge",
+            "charge_period_months",
+            "charge_amount",
         ]
 
 
 class TaxRateCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     payment_types_ids = ma.fields.List(
-        ma.fields.Int(), required=True, load_only=True,
-        validate=[validate.Length(min=1)]
+        ma.fields.Int(),
+        required=True,
+        load_only=True,
+        validate=[validate.Length(min=1)],
     )
     category = ma.fields.Enum(enum=TaxRateCategories, required=True)
 
@@ -442,13 +507,24 @@ class TaxRateRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = TaxRate
-        fields = ["name", "rate", "category", "balance", "status", "id", "code", "payment_types"]
+        fields = [
+            "name",
+            "rate",
+            "category",
+            "balance",
+            "status",
+            "id",
+            "code",
+            "payment_types",
+        ]
 
 
 class TaxRateUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     payment_types_ids = ma.fields.List(
-        ma.fields.Int(), required=True, load_only=True,
-        validate=[validate.Length(min=1)]
+        ma.fields.Int(),
+        required=True,
+        load_only=True,
+        validate=[validate.Length(min=1)],
     )
     category = ma.fields.Enum(enum=TaxRateCategories, required=True)
     status = ma.fields.Enum(enum=Statuses)
@@ -456,3 +532,11 @@ class TaxRateUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = TaxRate
         fields = ["name", "rate", "category", "payment_types_ids", "status", "id"]
+
+
+class CounterpartyIdSchema(ma.Schema):
+    counterparty_id = ma.fields.Int(
+        data_key="counterparty_id",
+        required=True,
+        description="for attaching to Counterparty",
+    )
