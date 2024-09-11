@@ -57,7 +57,7 @@ class CounterpartyArgsSchema(ma.Schema):
     page = ma.fields.Int()
     limit = ma.fields.Int()
     created_date = ma.fields.Date()
-    category = ma.fields.Enum(enum=TaxRateCategories)
+    category = ma.fields.Enum(enum=AccountCategories)
 
 
 class TaxRateArgsSchema(ma.Schema):
