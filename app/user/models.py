@@ -124,6 +124,10 @@ class User(Base):
     def is_accepted_to_system(self):
         return self.permissions.access_to_system if self.permissions else True
 
+    @property
+    def is_driver_salary_format(self):
+        return self.salary_calculation.salary_format == SalaryFormat.DRIVER
+
 
 class Partner(Base):
     __tablename__ = "partner"
@@ -153,7 +157,7 @@ class SalaryCalculation(Base):
 
     # зарплата и KPI
     salary_format: Mapped["SalaryFormat"] = mapped_column(
-        Enum(SalaryFormat), nullable=True
+        Enum(SalaryFormat), nullable=True, default=SalaryFormat.EMPLOYEE
     )  # Работник, Водитель, Оператор поддержки
     fixed_salary: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
     kpi_movement: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
@@ -237,9 +241,7 @@ class Permission(Base):
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
 
-    access_to_system: Mapped[bool] = mapped_column(
-        Boolean, default=True
-    )  # Значение права доступа (разрешено/не разрешено)
+    access_to_system: Mapped[bool] = mapped_column(Boolean, default=True)
 
     user: Mapped["User"] = relationship("User", back_populates="permissions")
 

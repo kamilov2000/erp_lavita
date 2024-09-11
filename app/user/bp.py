@@ -125,7 +125,7 @@ class UserByIdView(MethodView):
 
     @token_required
     @accept_to_system_permission
-    # @sql_exception_handler
+    @sql_exception_handler
     @user.arguments(UserSchema)
     @user.arguments(TokenSchema, location="headers")
     @user.response(200, UserSchema)
@@ -138,10 +138,11 @@ class UserByIdView(MethodView):
         Для отправки файла используйте Postman или другой инструмент, поддерживающий отправку файлов через форму.
         Обязательно передавайте файл в поле 'photo', и укажите остальные параметры.
         """
-        photo = update_data.pop("photo", None)
+        photo = request.files.get("photo")
         if photo:
             path = hash_image_save(uploaded_file=photo, model_name="user", ident=id)
             update_data["photo"] = path
+
         salary_calculation = update_data.pop("salary_calculation", {})
         permissions = update_data.pop("permissions", {})
         working_days = update_data.pop("working_days", [])
@@ -160,16 +161,19 @@ class UserByIdView(MethodView):
             setattr(permission_obj, k, v)
 
         for data in working_days:
-            id = data.get("id", None)
+            wd_id = data.get("id", None)
             partners_ids = data.pop("partners_ids", [])
-            working_day = WorkingDay.query.get(id)
-            if partners_ids:
+            working_day = WorkingDay.query.get(wd_id)
+            if partners_ids and user.is_driver_salary_format:
                 working_day.partners.clear()
                 users = User.query.filter(User.id.in_(partners_ids)).all()
                 partners = []
 
-                for user in users:
-                    partners.append(Partner(user_id=user.id))
+                for user_ in users:
+                    partner = Partner.query.filter_by(user_id=user_.id).first()
+                    if not partner:
+                        partner = Partner(user_id=user_.id)
+                    partners.append(partner)
                 data["partners"] = partners
 
             for k, v in data.items():

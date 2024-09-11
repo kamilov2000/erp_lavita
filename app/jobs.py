@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy import func, types
 
 from app.base import session
-from app.choices import DaysOfWeek
+from app.choices import DaysOfWeek, WorkScheduleStatus
 from app.finance.models import Counterparty
 from app.user.models import User, WorkingDay, WorkSchedule
 from app.utils.func import sql_exception_handler
@@ -52,7 +52,6 @@ def create_working_days_for_all_staff_task():
             .first()
         )
 
-        # Проверяем, что запись для этого дня еще не создана
         existing_schedule = (
             session.query(WorkSchedule)
             .filter(
@@ -66,12 +65,17 @@ def create_working_days_for_all_staff_task():
         if not existing_schedule:
             # Создаем рабочий день на основе графика
             working_schedule = WorkSchedule(
-                user=user, date=today_date, working_day_id=working_day.id
+                user=user,
+                date=today_date,
+                working_day_id=working_day.id,
+                status=(
+                    WorkScheduleStatus.DAY_OFF
+                    if not working_day.is_working_day
+                    else None
+                ),
             )
-
             # Добавляем партнеров из графика
-            working_day.partners.extend(working_day.partners)
-
+            working_schedule.partners.extend(working_day.partners)
             session.add(working_schedule)
 
         session.commit()

@@ -79,6 +79,7 @@ class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     department_name = ma.fields.Method("get_department", dump_only=True)
     permissions = ma.fields.Nested(PermissionForUserSchema())
     working_days = ma.fields.Nested(WorkingDaySchema(many=True))
+    photo = ma.fields.Str(dump_only=True)
 
     class Meta:
         model = User
@@ -94,6 +95,8 @@ class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "username",
             "permissions",
             "working_days",
+            "is_driver_salary_format",
+            "photo",
         ]
 
     role = auto_field(dump_only=True)

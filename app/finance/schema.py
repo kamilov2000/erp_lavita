@@ -98,9 +98,6 @@ class PagPaymentTypeSchema(ma.Schema):
 
 class PaymentTypeRetrieveUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     fiscal = ma.fields.Enum(enum=Statuses, required=False)
-    name = ma.fields.Str(required=False)
-    has_commissioner = ma.fields.Str(required=False)
-    commission_percentage = ma.fields.Float(required=False)
 
     class Meta:
         model = PaymentType
@@ -474,7 +471,6 @@ class CounterpartyRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "code",
             "status",
             "balance",
-            "id",
             "auto_charge",
             "category",
             "created_at",

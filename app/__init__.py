@@ -21,7 +21,7 @@ from app.events import register_events
 from app.finance.models import Transaction, TransactionHistory
 from app.finance.system_balance_accounts import create_system_balance_accounts
 from app.init_db import init_db
-from app.jobs import scheduled_auto_charge_task
+from app.jobs import create_working_days_for_all_staff_task, scheduled_auto_charge_task
 from app.user.models import User
 from app.utils.exc import CustomError
 
@@ -33,17 +33,30 @@ def create_app():
 
     scheduler.init_app(app)
 
-    def sync_with_main():
+    def sync_charge_job():
         with app.app_context():
             scheduled_auto_charge_task()
+
+    def sync_working_schedule():
+        with app.app_context():
+            create_working_days_for_all_staff_task()
 
     if not scheduler.get_job("auto_charge_job"):
         scheduler.add_job(
             id="auto_charge_job",
-            func=sync_with_main,
+            func=sync_charge_job,
             trigger="cron",
             minute="0",
             hour="0",
+        )
+
+    if not scheduler.get_job("auto_create_working_schedule_job"):
+        scheduler.add_job(
+            id="auto_create_working_schedule_job",
+            func=sync_working_schedule,
+            trigger="cron",
+            minute="0",
+            hour="1",
         )
 
     if not scheduler.running:
