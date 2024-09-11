@@ -1,9 +1,10 @@
 import marshmallow as ma
 from marshmallow import ValidationError, validate
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
+from sqlalchemy import func
 from werkzeug.datastructures import FileStorage
 
-from app import CrudOperations
+from app import CrudOperations, session
 from app.choices import (
     AccountCategories,
     AccountTypes,
@@ -63,19 +64,24 @@ class TaxRateArgsSchema(ma.Schema):
     name = ma.fields.String(required=False, description="Search")
     page = ma.fields.Int()
     limit = ma.fields.Int()
-    created_date = ma.fields.Date()
     category = ma.fields.Enum(enum=TaxRateCategories)
+    payment_type_name = ma.fields.Str(required=False)
 
 
 class PaymentTypeListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    fiscal = ma.fields.Enum(enum=Statuses)
+
     class Meta:
         model = PaymentType
-        fields = ["id", "name", "commission_percentage"]
+        fields = ["id", "name", "commission_percentage", "fiscal"]
 
 
 class PaymentTypeCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    fiscal = ma.fields.Enum(enum=Statuses)
+
     class Meta:
         model = PaymentType
+        fields = ["name", "has_commissioner", "fiscal"]
 
 
 class PaymentTypeForRelationsSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -90,9 +96,14 @@ class PagPaymentTypeSchema(ma.Schema):
 
 
 class PaymentTypeRetrieveUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    fiscal = ma.fields.Enum(enum=Statuses, required=False)
+    name = ma.fields.Str(required=False)
+    has_commissioner = ma.fields.Str(required=False)
+    commission_percentage = ma.fields.Float(required=False)
+
     class Meta:
         model = PaymentType
-        fields = ["id", "name", "has_commissioner", "commission_percentage"]
+        fields = ["id", "name", "has_commissioner", "commission_percentage", "fiscal"]
 
 
 class CashRegisterCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -150,10 +161,44 @@ class CashRegisterHistorySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class CashRegisterRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     histories = ma.fields.Nested(CashRegisterHistorySchema, many=True)
     payment_types = ma.fields.Nested(PaymentTypeForRelationsSchema, many=True)
+    incomes = ma.fields.Method("get_incomes")
+    expenses = ma.fields.Method("get_expenses")
 
     class Meta:
         model = CashRegister
-        fields = ["id", "name", "payment_types", "balance", "histories"]
+        fields = [
+            "id",
+            "name",
+            "payment_types",
+            "balance",
+            "histories",
+            "incomes",
+            "expenses",
+        ]
+
+    def get_incomes(self, obj):
+        total_amount = (
+            session.query(func.sum(Transaction.amount))
+            .filter_by(
+                debit_content_type="CashRegister",
+                debit_object_id=obj.id,
+                status=TransactionStatuses.PUBLISHED,
+            )
+            .scalar()
+        )
+        return total_amount if total_amount else 0
+
+    def get_expenses(self, obj):
+        total_amount = (
+            session.query(func.sum(Transaction.amount))
+            .filter_by(
+                credit_content_type="CashRegister",
+                credit_object_id=obj.id,
+                status=TransactionStatuses.PUBLISHED,
+            )
+            .scalar()
+        )
+        return total_amount if total_amount else 0
 
 
 class CashRegisterUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -185,15 +230,18 @@ class BalanceAccountCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class BalanceAccountListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = BalanceAccount
-        fields = ["id", "name", "code", "category", "account_type"]
+        fields = ["id", "name", "code", "category", "account_type", "balance"]
 
 
 class PagBalanceAccountSchema(ma.Schema):
-    data = ma.fields.Nested(CashRegisterListSchema(many=True))
+    data = ma.fields.Nested(BalanceAccountListSchema(many=True))
     pagination = ma.fields.Nested(BalanceAccountListSchema)
 
 
 class BalanceAccountRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    account_type = ma.fields.Enum(enum=AccountTypes)
+    category = ma.fields.Enum(enum=AccountCategories)
+
     class Meta:
         model = BalanceAccount
         fields = ["id", "name", "code", "category", "account_type", "balance"]
@@ -250,6 +298,7 @@ class TransactionListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     debit_category = ma.fields.Method("get_debit_category")
     number_transaction = ma.fields.Method("get_number_transaction")
     status = ma.fields.Enum(enum=TransactionStatuses)
+    created_at = ma.fields.DateTime(format="%d %b %Y, %H:%M")
 
     class Meta:
         model = Transaction
@@ -261,19 +310,11 @@ class TransactionListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "created_at",
             "number_transaction",
             "status",
-            "credit_category",
-            "debit_category",
             "created_at",
         ]
 
     def get_number_transaction(self, obj):
         return f"№{obj.id}"
-
-    def get_credit_category(self, obj):
-        return CATEGORY_COLLECTION[obj.credit_content_type]
-
-    def get_debit_category(self, obj):
-        return CATEGORY_COLLECTION[obj.debit_content_type]
 
 
 class PagTransactionSchema(ma.Schema):
@@ -381,6 +422,7 @@ class CounterpartySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class CounterpartyListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     status = ma.fields.Enum(enum=Statuses)
     category = ma.fields.Enum(enum=AccountCategories)
+    created_at = ma.fields.DateTime(format="%d %b %Y, %H:%M")
 
     class Meta:
         model = Counterparty
@@ -450,8 +492,21 @@ class CounterpartyRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 
 class CounterpartyUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
-    status = ma.fields.Enum(enum=Statuses)
+    status = ma.fields.Enum(enum=Statuses, required=False)
     category = ma.fields.Enum(enum=AccountCategories, dump_only=True)
+    name = ma.fields.Str(required=False)
+    auto_charge = ma.fields.Bool(required=False)
+    code = ma.fields.Str(
+        required=False, validate=[validate.Length(4), check_all_strs_is_nums]
+    )
+    address = ma.fields.Str(required=False)
+    legal_name = ma.fields.Str(required=False)
+    inn_or_pinfl = ma.fields.Str(required=False)
+    mfo = ma.fields.Str(required=False)
+    legal_address = ma.fields.Str(required=False)
+    contact = ma.fields.Str(required=False)
+    charge_period_months = ma.fields.Int(required=False)
+    charge_amount = ma.fields.Float(required=False)
 
     class Meta:
         model = Counterparty
@@ -461,7 +516,8 @@ class CounterpartyUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "status",
             "id",
             "auto_charge",
-            "category" "address",
+            "category",
+            "address",
             "legal_name",
             "inn_or_pinfl",
             "mfo",
@@ -489,10 +545,21 @@ class TaxRateCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 class TaxRateListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     category = ma.fields.Enum(enum=TaxRateCategories)
+    status = ma.fields.Enum(enum=Statuses)
+    payment_types = ma.fields.Nested(PaymentTypeForRelationsSchema, many=True)
 
     class Meta:
         model = TaxRate
-        fields = ["name", "rate", "category", "balance", "id", "code"]
+        fields = [
+            "name",
+            "rate",
+            "category",
+            "balance",
+            "id",
+            "code",
+            "status",
+            "payment_types",
+        ]
 
 
 class PagTaxRateSchema(ma.Schema):

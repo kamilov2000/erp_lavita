@@ -3,7 +3,7 @@ import datetime
 import jwt
 from flask import current_app, jsonify, request
 from flask.views import MethodView
-from flask_smorest import Blueprint, abort
+from flask_smorest import Blueprint
 from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -15,6 +15,7 @@ from app.user.models import (
     Permission,
     SalaryCalculation,
     User,
+    WorkingDay,
 )
 from app.user.schema import (
     DepartmentArgsSchema,
@@ -26,7 +27,6 @@ from app.user.schema import (
     DocumentUpdateListSchema,
     GroupArgsSchema,
     GroupCreateSchema,
-    GroupListSchema,
     GroupSchema,
     GroupUpdateSchema,
     LoginResponseSchema,
@@ -36,13 +36,9 @@ from app.user.schema import (
     PagUserSchema,
     UserCreateSchema,
     UserIdSchema,
-    UserListSchema,
     UserQueryArgSchema,
     UserSchema,
-    UserSearchSchema,
-    UserUpdateSchema,
 )
-from app.utils.exc import ItemNotFoundError
 from app.utils.func import (
     accept_to_system_permission,
     hash_image_save,
@@ -96,7 +92,7 @@ def register(data):
     user = session.execute(select(User).where(User.username == username)).scalar()
     if user:
         return msg_response("Username is already in use", False), 400
-    user = UserSchema().load(data, session=session)
+    user = User(**data)
     try:
         session.add(user)
         session.flush()
@@ -123,10 +119,7 @@ class UserByIdView(MethodView):
     @user.arguments(TokenSchema, location="headers")
     @user.response(200, UserSchema)
     def get(c, self, token, id):
-        try:
-            user = User.get_by_id(id)
-        except ItemNotFoundError:
-            abort(404, message="Item not found.")
+        user = User.get_or_404(id)
         return user
 
     @token_required
@@ -139,9 +132,19 @@ class UserByIdView(MethodView):
         """
         partly or whole updates for user segments.
         Send only that data which is need to update!
+
+        ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов через 'multipart/form-data'.
+        Для отправки файла используйте Postman или другой инструмент, поддерживающий отправку файлов через форму.
+        Обязательно передавайте файл в поле 'photo', и укажите остальные параметры.
         """
+        photo = update_data.pop("photo", None)
+        if photo:
+            path = hash_image_save(uploaded_file=photo, model_name="user", ident=id)
+            update_data["photo"] = path
         salary_calculation = update_data.pop("salary_calculation", {})
         permissions = update_data.pop("permissions", {})
+        working_days = update_data.pop("working_days", [])
+
         user = User.get_or_404(id)
         permission_obj = Permission.query.filter_by(user_id=id).first()
         salary_calc_obj = SalaryCalculation.query.filter_by(user_id=id).first()
@@ -154,6 +157,15 @@ class UserByIdView(MethodView):
 
         for k, v in permissions.items():
             setattr(permission_obj, k, v)
+
+        for data in working_days:
+            id = data.get("id", None)
+            partners_ids = data.pop("partners_ids", [])
+            partners = User.query.filter(User.id.in_(partners_ids)).all()
+            data["partners"] = partners
+            working_day = WorkingDay.query.get(id)
+            for k, v in data.items():
+                setattr(working_day, k, v)
 
         session.commit()
         return user

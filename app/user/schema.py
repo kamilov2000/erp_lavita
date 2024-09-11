@@ -1,8 +1,9 @@
 import marshmallow as ma
+from marshmallow import validate
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, SQLAlchemySchema, auto_field
 
 from app.base import session
-from app.choices import SalaryFormat, Statuses
+from app.choices import DaysOfWeek, SalaryFormat, Statuses
 from app.user.models import (
     Department,
     Document,
@@ -10,6 +11,7 @@ from app.user.models import (
     Permission,
     SalaryCalculation,
     User,
+    WorkingDay,
 )
 from app.utils.schema import DefaultDumpsSchema, PaginationSchema
 
@@ -28,11 +30,45 @@ class PermissionForUserSchema(DefaultDumpsSchema, SQLAlchemyAutoSchema):
         exclude = ["created_at", "updated_at"]
 
 
+class PartnerSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    class Meta:
+        model = User
+        fields = ["id", "full_name", "role"]
+
+
+class WorkingDaySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    day_of_week = ma.fields.Enum(enum=DaysOfWeek, dump_only=True)
+    is_working_day = ma.fields.Bool(required=True)
+    start_time = ma.fields.Time(required=True)
+    end_time = ma.fields.Time(required=True)
+    id = ma.fields.Int(required=True)
+    partners = ma.fields.Nested(PartnerSchema(many=True), dump_only=True)
+    partners_ids = ma.fields.List(
+        ma.fields.Int(),
+        required=True,
+        load_only=True,
+        validate=[validate.Length(min=1)],
+    )
+
+    class Meta:
+        model = WorkingDay
+        fields = [
+            "id",
+            "is_working_day",
+            "start_time",
+            "end_time",
+            "partners_ids",
+            "partners",
+            "day_of_week",
+        ]
+
+
 class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     salary_calculation = ma.fields.Nested(SalaryCalculationSchema())
     status = ma.fields.Enum(enum=Statuses)
     department_name = ma.fields.Method("get_department", dump_only=True)
     permissions = ma.fields.Nested(PermissionForUserSchema())
+    working_days = ma.fields.Nested(WorkingDaySchema(many=True))
 
     class Meta:
         model = User
@@ -47,6 +83,7 @@ class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "password",
             "username",
             "permissions",
+            "working_days",
         ]
 
     role = auto_field(dump_only=True)

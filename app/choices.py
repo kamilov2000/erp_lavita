@@ -68,3 +68,13 @@ class SalaryFormat(Enum):
     EMPLOYEE = "employee"
     DRIVER = "driver"
     SUPPORT_OPERATOR = "support_operator"
+
+
+class DaysOfWeek(Enum):
+    MONDAY = "monday"
+    TUESDAY = "tuesday"
+    WEDNESDAY = "wednesday"
+    THURSDAY = "thursday"
+    FRIDAY = "friday"
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"

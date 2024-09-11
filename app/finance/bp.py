@@ -14,6 +14,7 @@ from app.finance.models import (
     TaxRate,
     Transaction,
     TransactionComment,
+    tax_rate_payment_type,
 )
 from app.finance.schema import (
     AttachedFileSchema,
@@ -150,6 +151,8 @@ class CashRegisterView(CustomMethodPaginationView):
         new_data["payment_types"] = payment_types
 
         cash_register = CashRegister(**new_data)
+        schema = CashRegisterCreateSchema()
+        cash_register.add_temp_data("history_data", schema.dump(cash_register))
         session.add(cash_register)
         session.commit()
         schema = CashRegisterCreateSchema()
@@ -177,21 +180,24 @@ class CashRegisterByIdView(MethodView):
         return item
 
     @token_required
-    @sql_exception_handler
+    # @sql_exception_handler
     @finance.arguments(CashRegisterUpdateSchema)
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, CashRegisterUpdateSchema)
     def put(c, self, update_data, token, id):
         """Update existing cash_register"""
         payment_types_ids = update_data.pop("payment_types_ids", None)
-        payment_types = PaymentType.query.filter(
-            PaymentType.id.in_(payment_types_ids)
-        ).all()
-        update_data["payment_types"] = payment_types
+        if payment_types_ids:
+            payment_types = PaymentType.query.filter(
+                PaymentType.id.in_(payment_types_ids)
+            ).all()
+            update_data["payment_types"] = payment_types
         item = CashRegister.get_or_404(id)
 
         # delete all payment types from object
         item.payment_types.clear()
+        schema = CashRegisterUpdateSchema()
+        item.add_temp_data("history_data", schema.dump(item))
         schema = CashRegisterUpdateSchema()
 
         for col, val in update_data.items():
@@ -378,6 +384,7 @@ class TransactionView(CustomMethodPaginationView):
             credit_name=credit_name,
             debit_name=debit_name,
         )
+        transaction.add_temp_data("history_data", transaction.format())
         session.add(transaction)
         transaction.publish()
         session.commit()
@@ -406,7 +413,7 @@ def cancel_transaction(c, id):
         return jsonify({"message": "Can not change to Cancelled!"}), 400
 
     item.cancel()
-
+    item.add_temp_data("history_data", item.format())
     session.commit()
     return jsonify(
         {
@@ -450,7 +457,7 @@ class TransactionByIdView(MethodView):
         for col, val in update_data.items():
             setattr(item, col, val)
         item.publish()
-
+        item.add_temp_data("history_data", item.format())
         session.merge(item)
         session.commit()
         return item
@@ -512,6 +519,8 @@ class CounterpartyView(CustomMethodPaginationView):
         """Add a new counterparty"""
         counterparty = Counterparty(**new_data, category=AccountCategories.USER)
         session.add(counterparty)
+        schema = CounterpartySchema()
+        counterparty.add_temp_data("history_data", schema.dump(counterparty))
         session.commit()
         return new_data
 
@@ -546,7 +555,8 @@ class CounterPartyByIdView(MethodView):
 
         for col, val in update_data.items():
             setattr(item, col, val)
-
+        schema = CounterpartyUpdateSchema()
+        item.add_temp_data("history_data", schema.dump(item))
         session.merge(item)
         session.commit()
         return item
@@ -663,16 +673,24 @@ class TaxRateView(CustomMethodPaginationView):
     @token_required
     def get(c, self, args, token):
         """get list tax_rate"""
-        created_date = args.pop("created_date", None)
         category = args.pop("category", None)
+        payment_type_name = args.pop("payment_type_name", None)
         lst = []
-
-        if created_date:
-            lst.append(func.date(self.model.created_at) == created_date)
+        custom_query = None
         if category:
             lst.append(self.model.category == category)
+        if payment_type_name:
+            custom_query = (
+                session.query(TaxRate)
+                .join(tax_rate_payment_type)
+                .join(PaymentType)
+                .filter(PaymentType.name == payment_type_name)
+                .order_by(TaxRate.created_at.desc())
+            )
 
-        return super(TaxRateView, self).get(args, token, query_args=lst)
+        return super(TaxRateView, self).get(
+            args, token, query_args=lst, custom_query=custom_query
+        )
 
     @token_required
     @sql_exception_handler

@@ -1,4 +1,5 @@
 import datetime
+from datetime import time
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import (
@@ -11,13 +12,15 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
+    Time,
 )
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.base import Base, session
-from app.choices import SalaryFormat, Statuses
+from app.choices import DaysOfWeek, SalaryFormat, Statuses
+from app.utils.mixins import BalanceMixin
 
 if TYPE_CHECKING:
     from app.invoice.models import Invoice
@@ -30,43 +33,19 @@ warehouse_user = Table(
     Column("user_id", ForeignKey("user.id"), primary_key=True),
 )
 
+work_scheduler_partner_association = Table(
+    "work_schedule_partner",
+    Base.metadata,
+    Column("work_schedule_id", Integer, ForeignKey("work_schedule.id")),
+    Column("partner_id", Integer, ForeignKey("user.id")),
+)
 
-class Partner(Base):
-    __tablename__ = "partner"
-
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
-    partner_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("user.id")
-    )  # Напарник, тоже пользователь
-
-    user: Mapped["User"] = relationship(
-        "User", foreign_keys=[user_id], back_populates="partners"
-    )
-    partner: Mapped["User"] = relationship("User", foreign_keys=[partner_id])
-
-    @staticmethod
-    def add_partners(user: "User", partner: "User"):
-        """Добавить напарников друг к другу"""
-        # Проверяем, что они не напарники друг другу
-        if (
-            not session.query(Partner)
-            .filter_by(user_id=user.id, partner_id=partner.id)
-            .first()
-        ):
-            # Добавляем напарника
-            new_partner = Partner(user_id=user.id, partner_id=partner.id)
-            session.add(new_partner)
-
-        # Проверяем, что обратная связь тоже установлена
-        if (
-            not session.query(Partner)
-            .filter_by(user_id=partner.id, partner_id=user.id)
-            .first()
-        ):
-            reverse_partner = Partner(user_id=partner.id, partner_id=user.id)
-            session.add(reverse_partner)
-
-        session.commit()
+working_day_partner_association = Table(
+    "working_day_partner",
+    Base.metadata,
+    Column("working_day_id", Integer, ForeignKey("working_day.id")),
+    Column("partner_id", Integer, ForeignKey("user.id")),
+)
 
 
 class User(Base):
@@ -96,6 +75,9 @@ class User(Base):
         "Department", back_populates="users"
     )
     documents: Mapped["Department"] = relationship("Document", back_populates="user")
+    working_days: Mapped[List["WorkingDay"]] = relationship(
+        "WorkingDay", back_populates="user"
+    )
     salary: Mapped["Salary"] = relationship("Salary", back_populates="user")
     group: Mapped["Group"] = relationship("Group", back_populates="users")
     salary_calculation: Mapped["SalaryCalculation"] = relationship(
@@ -105,11 +87,6 @@ class User(Base):
     # рабочий график
     work_schedules: Mapped[list["WorkSchedule"]] = relationship(
         "WorkSchedule", back_populates="user"
-    )
-
-    # напарники для водителей
-    partners: Mapped[list["Partner"]] = relationship(
-        "Partner", foreign_keys=[Partner.user_id], back_populates="user"
     )
     permissions: Mapped["Permission"] = relationship(
         "Permission", back_populates="user"
@@ -133,7 +110,15 @@ class User(Base):
         salary = Salary(user_id=self.id)
         salary_calculation = SalaryCalculation(user_id=self.id)
         permission = Permission(user_id=self.id)
-        session.add_all([salary, permission, salary_calculation])
+        working_days = self.create_working_days()
+        session.add_all([salary, permission, salary_calculation] + working_days)
+
+    def create_working_days(self):
+        working_days = []
+        for day in DaysOfWeek:
+            working_day = WorkingDay(day_of_week=day, user_id=self.id)
+            working_days.append(working_day)
+        return working_days
 
     @property
     def is_accepted_to_system(self):
@@ -205,8 +190,12 @@ class WorkSchedule(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
     user: Mapped["User"] = relationship("User", back_populates="work_schedules")
 
+    partners: Mapped[List["User"]] = relationship(
+        "User", secondary=work_scheduler_partner_association, backref="work_schedule"
+    )
 
-class Salary(Base):
+
+class Salary(Base, BalanceMixin):
     __tablename__ = "salary"
 
     user_id: Mapped[int] = mapped_column(
@@ -214,7 +203,6 @@ class Salary(Base):
     )
     user: Mapped["User"] = relationship("User", back_populates="salary")
 
-    current_balance: Mapped[float] = mapped_column(Float, default=0)
     fixed_payment: Mapped[float] = mapped_column(Float, default=0)
 
 
@@ -228,3 +216,28 @@ class Permission(Base):
     )  # Значение права доступа (разрешено/не разрешено)
 
     user: Mapped["User"] = relationship("User", back_populates="permissions")
+
+
+class WorkingDay(Base):
+    __tablename__ = "working_day"
+
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+
+    day_of_week: Mapped["DaysOfWeek"] = mapped_column(Enum(DaysOfWeek))
+    is_working_day: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    start_time: Mapped[time] = mapped_column(
+        Time, default=time(9, 0)
+    )  # Начало рабочего дня
+    end_time: Mapped[time] = mapped_column(
+        Time, default=time(18, 0)
+    )  # Конец рабочего дня
+
+    # Связь многие ко многым с партнерами (сотрудниками)
+    partners: Mapped[List["User"]] = relationship(
+        "User", secondary=working_day_partner_association, backref="working_day"
+    )
+
+    def __repr__(self):
+        return f"<WorkingDay(user_id={self.user_id}, day_of_week={self.day_of_week}, is_working_day={self.is_working_day})>"

@@ -1,6 +1,6 @@
 from flask.views import MethodView
-from sqlalchemy import Enum, ForeignKey, JSON, String, Float
-from sqlalchemy.orm import declared_attr, mapped_column, Mapped, relationship
+from sqlalchemy import JSON, Enum, Float, ForeignKey, String
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
 from app import CrudOperations
 
@@ -19,9 +19,7 @@ class CustomMethodPaginationView(MethodView):
         if custom_query:
             query = custom_query
         else:
-            query = self.model.query.order_by(
-                self.model.created_at.desc()
-            )
+            query = self.model.query.order_by(self.model.created_at.desc())
         default_query_args = []
         if name:
             default_query_args.append(self.model.name.ilike(f"%{name}%"))
@@ -56,7 +54,7 @@ class HistoryMixin:
 
     @declared_attr
     def user(cls):
-        return relationship('User')
+        return relationship("User")
 
     @declared_attr
     def data(cls):
@@ -72,4 +70,25 @@ class BalanceMixin:
 
     @declared_attr
     def balance(cls) -> Mapped[float]:
-        return mapped_column(Float, default=0)
+        return mapped_column(Float, default=0, nullable=True)
+
+
+class TempDataMixin:
+    _temp_data = {}
+
+    def add_temp_data(self, key, value):
+        """Добавляем временные данные в словарь"""
+        self._temp_data[key] = value
+
+    def get_temp_data(self, key):
+        """Получаем временные данные по ключу"""
+        return self._temp_data.get(key, None)
+
+    def remove_temp_data(self, key):
+        """Удаляем временные данные по ключу"""
+        if key in self._temp_data:
+            del self._temp_data[key]
+
+    def clear_temp_data(self):
+        """Очищаем временный словарь"""
+        self._temp_data.clear()
