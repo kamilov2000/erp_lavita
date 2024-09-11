@@ -82,7 +82,7 @@ class PaymentTypeCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = PaymentType
-        fields = ["name", "has_commissioner", "fiscal", "commission_percentage"]
+        fields = ["name", "has_commissioner", "fiscal", "commission_percentage", "id"]
 
 
 class PaymentTypeForRelationsSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -153,7 +153,7 @@ class CashRegisterHistorySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = CashRegisterHistory
-        fields = ["operation_status", "created_at", "user_name", "data"]
+        fields = ["operation_status", "created_at", "user_name", "data", "id"]
 
     def get_user_name(self, obj):
         return obj.user_full_name
@@ -264,7 +264,7 @@ class TransactionHistorySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = TransactionHistory
-        fields = ["operation_status", "created_at", "user_name", "data", "status"]
+        fields = ["operation_status", "created_at", "user_name", "data", "status", "id"]
 
     def get_user_name(self, obj):
         return obj.user_full_name
@@ -329,7 +329,7 @@ class TransactionCommentSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = TransactionComment
-        fields = ["comment", "created_at", "user_name"]
+        fields = ["comment", "created_at", "user_name", "id"]
 
     def get_user_name(self, obj):
         return obj.user_full_name
@@ -452,7 +452,7 @@ class CounterpartyHistorySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = TransactionHistory
-        fields = ["operation_status", "created_at", "user_name", "data", "status"]
+        fields = ["operation_status", "created_at", "user_name", "data", "status", "id"]
 
     def get_user_name(self, obj):
         return obj.user_full_name
@@ -469,6 +469,7 @@ class CounterpartyRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = Counterparty
         fields = [
+            "id",
             "name",
             "code",
             "status",
