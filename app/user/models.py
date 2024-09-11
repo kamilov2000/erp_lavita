@@ -122,7 +122,7 @@ class User(Base):
 
     @property
     def is_accepted_to_system(self):
-        return self.permissions.access_to_system
+        return self.permissions.access_to_system if self.permissions else True
 
 
 class SalaryCalculation(Base):
