@@ -111,10 +111,10 @@ class PaymentTypeByIdView(MethodView):
         """Update existing payment_type"""
         item = PaymentType.get_or_404(id)
 
-        item.create_counterparty()
-        item.update_counterparty(update_data.get("name"))
         for col, val in update_data.items():
             setattr(item, col, val)
+        item.create_counterparty()
+        item.update_counterparty(update_data.get("name"))
         session.merge(item)
         session.commit()
 
