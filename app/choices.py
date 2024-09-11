@@ -78,3 +78,11 @@ class DaysOfWeek(Enum):
     FRIDAY = "friday"
     SATURDAY = "saturday"
     SUNDAY = "sunday"
+
+
+class WorkScheduleStatus(Enum):
+    PRESENCE = "presence"
+    SKIP = "skip"
+    LATENESS = "lateness"
+    VACATION = "vacation"
+    DAY_OFF = "day_off"

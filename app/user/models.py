@@ -19,7 +19,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.base import Base, session
-from app.choices import DaysOfWeek, SalaryFormat, Statuses
+from app.choices import DaysOfWeek, SalaryFormat, Statuses, WorkScheduleStatus
 from app.utils.mixins import BalanceMixin
 
 if TYPE_CHECKING:
@@ -37,14 +37,14 @@ work_scheduler_partner_association = Table(
     "work_schedule_partner",
     Base.metadata,
     Column("work_schedule_id", Integer, ForeignKey("work_schedule.id")),
-    Column("partner_id", Integer, ForeignKey("user.id")),
+    Column("partner_id", Integer, ForeignKey("partner.id")),
 )
 
 working_day_partner_association = Table(
     "working_day_partner",
     Base.metadata,
     Column("working_day_id", Integer, ForeignKey("working_day.id")),
-    Column("partner_id", Integer, ForeignKey("user.id")),
+    Column("partner_id", Integer, ForeignKey("partner.id")),
 )
 
 
@@ -125,6 +125,27 @@ class User(Base):
         return self.permissions.access_to_system if self.permissions else True
 
 
+class Partner(Base):
+    __tablename__ = "partner"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+
+    for_half_day: Mapped[bool] = mapped_column(
+        Boolean, default=False
+    )  # Партнер на половину дня
+    start_time: Mapped[Time] = mapped_column(
+        Time, nullable=True
+    )  # Время начала работы партнера
+    end_time: Mapped[Time] = mapped_column(
+        Time, nullable=True
+    )  # Время окончания работы партнера
+
+    def __repr__(self):
+        return f"<Partner(user={self.user.name}, for_half_day={self.for_half_day}, start_time={self.start_time}, end_time={self.end_time})>"
+
+
 class SalaryCalculation(Base):
     __tablename__ = "salary_calculation"
 
@@ -183,15 +204,20 @@ class WorkSchedule(Base):
     __tablename__ = "work_schedule"
 
     date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String, nullable=False
-    )  # Явка, Пропуск, Опоздание, Отпуск, Выходной
+    status: Mapped["WorkScheduleStatus"] = mapped_column(
+        Enum(WorkScheduleStatus), nullable=True
+    )
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
     user: Mapped["User"] = relationship("User", back_populates="work_schedules")
 
-    partners: Mapped[List["User"]] = relationship(
-        "User", secondary=work_scheduler_partner_association, backref="work_schedule"
+    working_day_id: Mapped[int] = mapped_column(Integer, ForeignKey("working_day.id"))
+    working_day: Mapped["WorkingDay"] = relationship(
+        "WorkingDay", backref="working_day"
+    )
+
+    partners: Mapped[List["Partner"]] = relationship(
+        "Partner", secondary=work_scheduler_partner_association, backref="work_schedule"
     )
 
 
@@ -235,8 +261,8 @@ class WorkingDay(Base):
     )  # Конец рабочего дня
 
     # Связь многие ко многым с партнерами (сотрудниками)
-    partners: Mapped[List["User"]] = relationship(
-        "User", secondary=working_day_partner_association, backref="working_day"
+    partners: Mapped[List["Partner"]] = relationship(
+        "Partner", secondary=working_day_partner_association, backref="working_day"
     )
 
     def __repr__(self):
