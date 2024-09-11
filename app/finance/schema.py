@@ -78,10 +78,11 @@ class PaymentTypeListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 class PaymentTypeCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     fiscal = ma.fields.Enum(enum=Statuses)
+    commission_percentage = ma.fields.Float(required=False)
 
     class Meta:
         model = PaymentType
-        fields = ["name", "has_commissioner", "fiscal"]
+        fields = ["name", "has_commissioner", "fiscal", "commission_percentage"]
 
 
 class PaymentTypeForRelationsSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):

@@ -12,6 +12,7 @@ from app.user.models import (
     Department,
     Document,
     Group,
+    Partner,
     Permission,
     SalaryCalculation,
     User,
@@ -124,7 +125,7 @@ class UserByIdView(MethodView):
 
     @token_required
     @accept_to_system_permission
-    @sql_exception_handler
+    # @sql_exception_handler
     @user.arguments(UserSchema)
     @user.arguments(TokenSchema, location="headers")
     @user.response(200, UserSchema)
@@ -161,9 +162,16 @@ class UserByIdView(MethodView):
         for data in working_days:
             id = data.get("id", None)
             partners_ids = data.pop("partners_ids", [])
-            partners = User.query.filter(User.id.in_(partners_ids)).all()
-            data["partners"] = partners
             working_day = WorkingDay.query.get(id)
+            if partners_ids:
+                working_day.partners.clear()
+                users = User.query.filter(User.id.in_(partners_ids)).all()
+                partners = []
+
+                for user in users:
+                    partners.append(Partner(user_id=user.id))
+                data["partners"] = partners
+
             for k, v in data.items():
                 setattr(working_day, k, v)
 

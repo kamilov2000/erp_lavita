@@ -8,6 +8,7 @@ from app.user.models import (
     Department,
     Document,
     Group,
+    Partner,
     Permission,
     SalaryCalculation,
     User,
@@ -31,9 +32,18 @@ class PermissionForUserSchema(DefaultDumpsSchema, SQLAlchemyAutoSchema):
 
 
 class PartnerSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    full_name = ma.fields.Method("get_full_name")
+    role = ma.fields.Method("get_role")
+
     class Meta:
-        model = User
+        model = Partner
         fields = ["id", "full_name", "role"]
+
+    def get_full_name(self, obj):
+        return obj.user.full_name
+
+    def get_role(self, obj):
+        return obj.user.role
 
 
 class WorkingDaySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -45,7 +55,7 @@ class WorkingDaySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     partners = ma.fields.Nested(PartnerSchema(many=True), dump_only=True)
     partners_ids = ma.fields.List(
         ma.fields.Int(),
-        required=True,
+        required=False,
         load_only=True,
         validate=[validate.Length(min=1)],
     )

@@ -28,7 +28,6 @@ from app.finance.schema import (
     CashRegisterUpdateSchema,
     CounterpartyArgsSchema,
     CounterpartyForTransaction,
-    CounterpartyIdSchema,
     CounterpartyRetrieveSchema,
     CounterpartySchema,
     CounterpartyUpdateSchema,
@@ -87,7 +86,7 @@ class PaymentTypeView(CustomMethodPaginationView):
         # если has_commissioner == True то создастся новый контрагент
         payment_type.create_counterparty()
         session.commit()
-
+        new_data["id"] = payment_type.id
         return new_data
 
 
@@ -180,7 +179,7 @@ class CashRegisterByIdView(MethodView):
         return item
 
     @token_required
-    # @sql_exception_handler
+    @sql_exception_handler
     @finance.arguments(CashRegisterUpdateSchema)
     @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, CashRegisterUpdateSchema)
@@ -245,7 +244,7 @@ class BalanceAccountView(CustomMethodPaginationView):
         balance_account = BalanceAccount(**new_data, category=AccountCategories.USER)
         session.add(balance_account)
         session.commit()
-
+        new_data["id"] = balance_account.id
         return new_data
 
 
@@ -522,7 +521,7 @@ class CounterpartyView(CustomMethodPaginationView):
         schema = CounterpartySchema()
         counterparty.add_temp_data("history_data", schema.dump(counterparty))
         session.commit()
-        return new_data
+        return schema.dump(counterparty)
 
 
 @finance.route("/counterparty/<int:id>")
@@ -659,7 +658,9 @@ def create_attach_file(c, new_data, token):
 
     session.add(item)
     session.commit()
-    return item
+    new_data["id"] = item.id
+    new_data["filepath"] = path
+    return new_data
 
 
 @finance.route("/tax_rate")
@@ -709,6 +710,7 @@ class TaxRateView(CustomMethodPaginationView):
         session.add(tax_rate)
         tax_rate.create_counterparty()
         session.commit()
+        new_data["id"] = tax_rate.id
         return new_data
 
 
