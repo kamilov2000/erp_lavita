@@ -94,6 +94,7 @@ def register(data):
     if user:
         return msg_response("Username is already in use", False), 400
     user = User(**data)
+    user.set_password(data.get("password"))
     try:
         session.add(user)
         session.flush()

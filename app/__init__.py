@@ -15,10 +15,8 @@ from flask_apscheduler import APScheduler
 from flask_smorest import Api
 from jwt import ExpiredSignatureError, InvalidTokenError
 
-from app.base import drop_db, session
-from app.choices import CrudOperations
+from app.base import drop_db, session, drop_everything, engine
 from app.events import register_events
-from app.finance.models import Transaction, TransactionHistory
 from app.finance.system_balance_accounts import create_system_balance_accounts
 from app.init_db import init_db
 from app.jobs import create_working_days_for_all_staff_task, scheduled_auto_charge_task
@@ -127,6 +125,7 @@ def create_app():
         path = os.path.abspath(app.config["UPLOAD_FOLDER"])
         return send_from_directory(path, name)
 
-    # drop_db()
+    # drop_db
+    # drop_everything(engine)
 
     return app

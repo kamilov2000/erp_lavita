@@ -3,8 +3,8 @@ from sqlalchemy import event
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-from app import CrudOperations
 from app.base import Base, engine, session
+from app.choices import CrudOperations
 from app.finance.models import (
     CashRegister,
     CashRegisterHistory,

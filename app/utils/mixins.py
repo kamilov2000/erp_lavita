@@ -2,7 +2,7 @@ from flask.views import MethodView
 from sqlalchemy import JSON, Enum, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
-from app import CrudOperations
+from app.choices import CrudOperations
 
 
 class CustomMethodPaginationView(MethodView):

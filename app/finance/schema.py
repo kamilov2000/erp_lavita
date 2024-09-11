@@ -4,13 +4,14 @@ from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from sqlalchemy import func
 from werkzeug.datastructures import FileStorage
 
-from app import CrudOperations, session
+from app import session
 from app.choices import (
     AccountCategories,
     AccountTypes,
     Statuses,
     TaxRateCategories,
     TransactionStatuses,
+    CrudOperations
 )
 from app.finance.models import (
     BalanceAccount,

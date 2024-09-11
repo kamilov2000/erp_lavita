@@ -1,5 +1,6 @@
 from sqlalchemy.exc import SQLAlchemyError
-from flask import current_app
+from sqlalchemy.orm import joinedload
+from flask import current_app, jsonify
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from werkzeug.utils import secure_filename
@@ -130,49 +131,72 @@ class MarkupFilterById(MethodView):
 @filter.response(400, ResponseSchema)
 @filter.response(200, MarkupFilterDetailSchema)
 def add_markups_from_excel(c, token, data, filter_id):
+    # Check if the filter_id is valid
     markup_filter = MarkupFilter.get_by_id(filter_id)
+    if not markup_filter:
+        return msg_response("Invalid filter ID", 0), 400
+    
+    # Extract file from data
     file = data.get("file")
-    if not data or not file:
-        return msg_response("Invalid file input"), 400
+    if not file:
+        return msg_response("Invalid file input", 0), 400
+    
+    # Read file based on its extension
     filename = secure_filename(file.filename)
     if filename.endswith(".csv"):
-        df = pd.read_csv(
-            file, usecols=[0], names=["id"], encoding="utf-8", sep="\s+|;|:|,"
-        )
+        df = pd.read_csv(file, usecols=[0], names=["id"], encoding="utf-8", sep="\s+|;|:|,")
     elif filename.endswith(".xls") or filename.endswith(".xlsx"):
         df = pd.read_excel(file, usecols=[0], names=["id"], engine="openpyxl")
     else:
-        return msg_response("Unsupported file format"), 400
+        return msg_response("Unsupported file format", 0), 400
+
+    # Clean up data
     df = df.drop_duplicates().dropna()
-    markup_ids = df["id"].tolist()
+    markup_ids = df["id"].astype(str).tolist()
 
-    for markup_id in markup_ids:
-        exist = Markup.query.get(markup_id)
-        if exist:
-            if exist not in markup_filter.markups:
-                markup_filter.markups.append(exist)
-            continue
-        existing_unit = (
-            ProductUnit.query.join(
-                ProductLot, ProductLot.id == ProductUnit.product_lot_id
-            )
-            .join(Invoice, Invoice.id == ProductLot.invoice_id)
-            .filter(
-                Invoice.type == InvoiceTypes.PRODUCTION,
-                Invoice.status == InvoiceStatuses.PUBLISHED,
-                ProductUnit.id == markup_id,
-            )
-            .first()
+    # Batch query to check existing markups
+    existing_markups = Markup.query.filter(Markup.id.in_(markup_ids)).all()
+    existing_markup_ids = {markup.id for markup in existing_markups}
+
+    # Batch query to check ProductUnit existence
+    existing_units = (
+        ProductUnit.query
+        .join(ProductLot, ProductLot.id == ProductUnit.product_lot_id)
+        .join(Invoice, Invoice.id == ProductLot.invoice_id)
+        .filter(
+            Invoice.type == InvoiceTypes.PRODUCTION,
+            Invoice.status == InvoiceStatuses.PUBLISHED,
+            ProductUnit.id.in_(markup_ids),
         )
-        if existing_unit:
-            markup_filter.markups.append(
-                Markup(id=markup_id, is_used=True, date_of_use=existing_unit.created_at)
-            )
-        else:
-            markup_filter.markups.append(Markup(id=markup_id, is_used=False))
+        .options(joinedload(ProductUnit.product_lot).joinedload(ProductLot.invoice))
+        .all()
+    )
+    existing_units_ids = {unit.id: unit for unit in existing_units}
 
-    session.commit()
-    return markup_filter
+    # Collect new markups to add
+    new_markups = []
+    for markup_id in markup_ids:
+        if markup_id in existing_markup_ids:
+            if markup_id not in [markup.id for markup in markup_filter.markups]:
+                markup_filter.markups.append(Markup(id=markup_id))
+        else:
+            unit = existing_units_ids.get(markup_id)
+            if unit:
+                new_markups.append(Markup(id=markup_id, is_used=True, date_of_use=unit.created_at))
+            else:
+                new_markups.append(Markup(id=markup_id, is_used=False))
+
+    # Add new markups in bulk
+    markup_filter.markups.extend(new_markups)
+
+    # Commit the transaction
+    try:
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        return msg_response(str(e), 0), 500
+
+    return msg_response(markup_filter.to_dict()), 200
 
 
 @filter.get("/<filter_id>/unused-markups/")

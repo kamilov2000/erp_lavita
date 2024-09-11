@@ -7,7 +7,8 @@ from sqlalchemy.orm import (
     Mapped,
     mapped_column,
     sessionmaker,
-    scoped_session, )
+    scoped_session,
+)
 from flask import current_app, abort
 from datetime import datetime, date
 from typing import Optional
@@ -150,4 +151,51 @@ class Base(DeclarativeBase):
 
 def drop_db():
     Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+
+def drop_everything(engine):
+    """(On a live db) drops all foreign key constraints before dropping all tables.
+    Workaround for SQLAlchemy not doing DROP ## CASCADE for drop_all()
+    (https://github.com/pallets/flask-sqlalchemy/issues/722)
+    """
+    from sqlalchemy.engine.reflection import Inspector
+    from sqlalchemy.schema import (
+        DropConstraint,
+        DropTable,
+        MetaData,
+        Table,
+        ForeignKeyConstraint,
+    )
+
+    con = engine.connect()
+    trans = con.begin()
+    inspector = Inspector.from_engine(db.engine)
+
+    # We need to re-create a minimal metadata with only the required things to
+    # successfully emit drop constraints and tables commands for postgres (based
+    # on the actual schema of the running instance)
+    meta = MetaData()
+    tables = []
+    all_fkeys = []
+
+    for table_name in inspector.get_table_names():
+        fkeys = []
+
+        for fkey in inspector.get_foreign_keys(table_name):
+            if not fkey["name"]:
+                continue
+
+            fkeys.append(ForeignKeyConstraint((), (), name=fkey["name"]))
+
+        tables.append(Table(table_name, meta, *fkeys))
+        all_fkeys.extend(fkeys)
+
+    for fkey in all_fkeys:
+        con.execute(DropConstraint(fkey))
+
+    for table in tables:
+        con.execute(DropTable(table))
+
+    trans.commit()
     Base.metadata.create_all(bind=engine)
