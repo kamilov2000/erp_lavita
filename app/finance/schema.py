@@ -8,10 +8,10 @@ from app import session
 from app.choices import (
     AccountCategories,
     AccountTypes,
+    CrudOperations,
     Statuses,
     TaxRateCategories,
     TransactionStatuses,
-    CrudOperations
 )
 from app.finance.models import (
     BalanceAccount,
@@ -227,9 +227,20 @@ class BalanceAccountCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 
 class BalanceAccountListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    account_type = ma.fields.Enum(enum=AccountTypes)
+    category = ma.fields.Enum(enum=AccountCategories)
+
     class Meta:
         model = BalanceAccount
-        fields = ["id", "name", "code", "category", "account_type", "balance"]
+        fields = [
+            "id",
+            "name",
+            "code",
+            "category",
+            "account_type",
+            "balance",
+            "can_edit_delete",
+        ]
 
 
 class PagBalanceAccountSchema(ma.Schema):
@@ -243,7 +254,15 @@ class BalanceAccountRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = BalanceAccount
-        fields = ["id", "name", "code", "category", "account_type", "balance"]
+        fields = [
+            "id",
+            "name",
+            "code",
+            "category",
+            "account_type",
+            "balance",
+            "can_edit_delete",
+        ]
 
 
 class BalanceAccountUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -310,6 +329,8 @@ class TransactionListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "number_transaction",
             "status",
             "created_at",
+            "can_edit",
+            "can_cancel",
         ]
 
     def get_number_transaction(self, obj):
@@ -434,6 +455,7 @@ class CounterpartyListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "auto_charge",
             "category",
             "created_at",
+            "can_delete_and_edit",
         ]
 
 

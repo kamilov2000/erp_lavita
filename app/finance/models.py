@@ -122,6 +122,10 @@ class BalanceAccount(Base, BalanceMixin):
         Enum(AccountTypes), default=AccountTypes.ACTIVE
     )
 
+    @property
+    def can_edit_delete(self):
+        return self.category == AccountCategories.USER
+
     def __repr__(self) -> str:
         return (
             f"<BalanceAccount(name={self.name},"
@@ -320,9 +324,7 @@ class Counterparty(TempDataMixin, Base, BalanceMixin):
 
     @property
     def can_delete_and_edit(self) -> bool:
-        if self.category == AccountCategories.USER:
-            return True
-        return False
+        return self.category == AccountCategories.USER
 
     def create_auto_charge_transaction(self):
         current_year = datetime.now().year
