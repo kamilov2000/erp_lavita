@@ -49,6 +49,7 @@ from app.finance.schema import (
     TransactionRetrieveSchema,
 )
 from app.finance.utils import TRANSACTION_DEBIT_CREDIT_CATEGORIES
+from app.user.models import Salary
 from app.utils.func import hash_image_save, sql_exception_handler, token_required
 from app.utils.mixins import CustomMethodPaginationView
 from app.utils.schema import ResponseSchema, TokenSchema
@@ -197,7 +198,6 @@ class CashRegisterByIdView(MethodView):
         item.payment_types.clear()
         schema = CashRegisterUpdateSchema()
         item.add_temp_data("history_data", schema.dump(item))
-        schema = CashRegisterUpdateSchema()
 
         for col, val in update_data.items():
             setattr(item, col, val)
@@ -329,6 +329,15 @@ class TransactionView(CustomMethodPaginationView):
         category_object_id = args.pop("category_object_id", None)
         custom_query = None
         lst = []
+
+        # если в качестве категории будет Юзер то нужно его поменять на Salary
+        # потому что в ней баланс юзера
+        if category_name == "User":
+            category_name = "Salary"
+            category_object_id = (
+                Salary.query.filter_by(user_id=category_object_id).first().id
+            )
+
         if search_term:
             lst.append(
                 or_(

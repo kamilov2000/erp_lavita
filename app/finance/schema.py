@@ -392,9 +392,13 @@ class TransactionRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         return f"№{obj.id}"
 
     def get_credit_category(self, obj):
+        if obj.credit_content_type == "Salary":
+            return CATEGORY_COLLECTION["User"]
         return CATEGORY_COLLECTION[obj.credit_content_type]
 
     def get_debit_category(self, obj):
+        if obj.debit_content_type == "Salary":
+            return CATEGORY_COLLECTION["User"]
         return CATEGORY_COLLECTION[obj.debit_content_type]
 
 

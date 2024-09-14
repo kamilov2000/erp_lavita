@@ -13,6 +13,7 @@ from app.finance.models import (
     Transaction,
     TransactionHistory,
 )
+from app.user.models import Department, DepartmentHistory, User, UserHistory
 
 Session = sessionmaker(bind=engine)
 
@@ -83,6 +84,42 @@ def register_events():
                 action=action,
                 target=target,
                 extra_fields={"status": target.status, "counterparty_id": target.id},
+            )
+        )
+
+    @event.listens_for(User, "after_insert")
+    @event.listens_for(User, "after_update")
+    def prepare_data_for_user(mapper, connection, target):
+        action = (
+            CrudOperations.CREATED if not target.histories else CrudOperations.UPDATED
+        )
+        if not hasattr(g, "history_to_commit"):
+            g.history_to_commit = []
+
+        g.history_to_commit.append(
+            create_history_data(
+                model=UserHistory,
+                action=action,
+                target=target,
+                extra_fields={"user_id": target.id},
+            )
+        )
+
+    @event.listens_for(Department, "after_insert")
+    @event.listens_for(Department, "after_update")
+    def prepare_data_for_department(mapper, connection, target):
+        action = (
+            CrudOperations.CREATED if not target.histories else CrudOperations.UPDATED
+        )
+        if not hasattr(g, "history_to_commit"):
+            g.history_to_commit = []
+
+        g.history_to_commit.append(
+            create_history_data(
+                model=DepartmentHistory,
+                action=action,
+                target=target,
+                extra_fields={"department_id": target.id},
             )
         )
 

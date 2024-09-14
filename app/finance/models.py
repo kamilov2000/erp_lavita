@@ -23,6 +23,7 @@ from app.choices import (
     TaxRateCategories,
     TransactionStatuses,
 )
+from app.user.models import Salary
 from app.utils.mixins import BalanceMixin, HistoryMixin, TempDataMixin
 
 

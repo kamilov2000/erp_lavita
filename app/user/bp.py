@@ -6,19 +6,25 @@ from flask.views import MethodView
 from flask_smorest import Blueprint
 from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
 
 from app.base import session
+from app.choices import AccountCategories, TransactionStatuses, UserTransactionAction
+from app.finance.models import BalanceAccount, Transaction, TransactionComment
 from app.user.models import (
     Department,
     Document,
     Group,
     Partner,
     Permission,
+    Salary,
     SalaryCalculation,
     User,
     WorkingDay,
+    WorkSchedule,
 )
 from app.user.schema import (
+    CreateTransactionSchema,
     DepartmentArgsSchema,
     DepartmentCreateSchema,
     DepartmentRetrieveSchema,
@@ -34,11 +40,18 @@ from app.user.schema import (
     LoginSchema,
     PagDepartmentSchema,
     PagGroupSchema,
+    PagUserSalarySchema,
     PagUserSchema,
+    PagWorkScheduleSchema,
     UserCreateSchema,
     UserIdSchema,
     UserQueryArgSchema,
+    UserSalaryQueryArgSchema,
+    UserSalaryRetrieveSchema,
     UserSchema,
+    WorkScheduleArgsSchema,
+    WorkScheduleRetrieveSchema,
+    WorkScheduleUpdate,
 )
 from app.utils.func import (
     accept_to_system_permission,
@@ -98,6 +111,8 @@ def register(data):
     try:
         session.add(user)
         session.flush()
+        schema = UserCreateSchema()
+        user.add_temp_data("history_data", schema.dump(user))
         user.create_salary_abd_permission_obj()
         session.commit()
     except SQLAlchemyError as e:
@@ -149,6 +164,8 @@ class UserByIdView(MethodView):
         working_days = update_data.pop("working_days", [])
 
         user = User.get_or_404(id)
+        schema = UserCreateSchema()
+        user.add_temp_data("history_data", schema.dump(user))
         permission_obj = Permission.query.filter_by(user_id=id).first()
         salary_calc_obj = SalaryCalculation.query.filter_by(user_id=id).first()
 
@@ -163,19 +180,7 @@ class UserByIdView(MethodView):
 
         for data in working_days:
             wd_id = data.get("id", None)
-            partners_ids = data.pop("partners_ids", [])
             working_day = WorkingDay.query.get(wd_id)
-            if partners_ids and user.is_driver_salary_format:
-                working_day.partners.clear()
-                users = User.query.filter(User.id.in_(partners_ids)).all()
-                partners = []
-
-                for user_ in users:
-                    partner = Partner.query.filter_by(user_id=user_.id).first()
-                    if not partner:
-                        partner = Partner(user_id=user_.id)
-                    partners.append(partner)
-                data["partners"] = partners
 
             for k, v in data.items():
                 setattr(working_day, k, v)
@@ -225,6 +230,8 @@ class UserView(CustomMethodPaginationView):
     def post(c, self, new_data, token):
         """Add a new user"""
         user = User(**new_data)
+        schema = UserCreateSchema()
+        user.add_temp_data("history_data", schema.dump(user))
         session.add(user)
         session.flush()
         user.create_salary_abd_permission_obj()
@@ -257,6 +264,8 @@ class DepartmentView(CustomMethodPaginationView):
     def post(c, self, new_data, token):
         """Add a new department"""
         item = Department(**new_data)
+        schema = DepartmentSchema()
+        item.add_temp_data("history_data", schema.dump(item))
         session.add(item)
         session.commit()
         return item
@@ -285,6 +294,7 @@ class DepartmentIdView(MethodView):
         item = Department.get_or_404(id)
 
         schema = DepartmentSchema()
+        item.add_temp_data("history_data", schema.dump(item))
         schema.load(update_data, instance=item, partial=True)
         session.commit()
         return schema.dump(item)
@@ -462,3 +472,213 @@ def list_document(c, args, token):
     documents = Document.query.filter_by(user_id=user_id).all()
     schema = DocumentUpdateListSchema()
     return schema.dump(documents, many=True)
+
+
+@user.route("/work_schedule")
+class WorkScheduleView(CustomMethodPaginationView):
+    model = User
+
+    @user.arguments(WorkScheduleArgsSchema, location="query")
+    @user.arguments(TokenSchema, location="headers")
+    @user.response(400, ResponseSchema)
+    @user.response(200, PagWorkScheduleSchema)
+    @token_required
+    @accept_to_system_permission
+    def get(c, self, args, token):
+        """get list work_schedules"""
+        current_year = datetime.date.today().year
+        current_month = datetime.date.today().month
+        department_id = args.get("department_id")
+        start_date = args.get(
+            "start_date", datetime.datetime(current_year, current_month, 1)
+        )
+        end_date = args.get(
+            "end_date", datetime.datetime(current_year, current_month, 14)
+        )
+        group_id = args.get("group_id")
+        search = args.get("search")
+        custom_query = None
+        lst = []
+        if department_id:
+            lst.append(self.model.department_id == department_id)
+        if group_id:
+            lst.append(self.model.group_id == group_id)
+        if start_date and end_date:
+            custom_query = (
+                session.query(User)
+                .join(User.work_schedules)
+                .filter(WorkSchedule.date.between(start_date, end_date))
+                .options(joinedload(User.work_schedules))
+            )
+        if search:
+            lst.append(
+                or_(
+                    self.model.last_name.ilike(f"%{search}%"),
+                    self.model.first_name.ilike(f"%{search}%"),
+                ),
+            )
+        return super(WorkScheduleView, self).get(
+            args, token, lst, custom_query=custom_query
+        )
+
+
+@user.route("/work_schedule/<int:id>/")
+class WorkScheduleByIdView(MethodView):
+
+    @user.arguments(TokenSchema, location="headers")
+    @user.response(400, ResponseSchema)
+    @user.response(200, WorkScheduleRetrieveSchema)
+    @token_required
+    @accept_to_system_permission
+    def get(c, self, token, id):
+
+        item = WorkSchedule.get_or_404(id)
+        return item
+
+    @sql_exception_handler
+    @user.arguments(TokenSchema, location="headers")
+    @user.arguments(WorkScheduleUpdate)
+    @user.response(400, ResponseSchema)
+    @user.response(200, WorkScheduleUpdate)
+    @token_required
+    def put(c, self, token, update_data, id):
+        """update work_schedule for user"""
+        partners = update_data.pop("partners", None)
+
+        item = WorkSchedule.get_or_404(id)
+
+        item.partners.clear()
+        partner_lst = []
+        for partner in partners:
+            obj_partner = Partner.query.filter_by(
+                user_id=partner.get("user_id")
+            ).first()
+            if not obj_partner:
+                obj_partner = Partner(**partner)
+                session.add(obj_partner)
+            else:
+                for k, v in partner.items():
+                    setattr(obj_partner, k, v)
+            partner_lst.append(obj_partner)
+
+        update_data["partners"] = partner_lst
+        for col, val in update_data.items():
+            setattr(item, col, val)
+
+        session.merge(item)
+        session.commit()
+        return item
+
+
+@user.route("/salary")
+class SalaryView(CustomMethodPaginationView):
+    model = User
+
+    @user.arguments(UserSalaryQueryArgSchema, location="query")
+    @user.arguments(TokenSchema, location="headers")
+    @user.response(400, ResponseSchema)
+    @user.response(200, PagUserSalarySchema)
+    @token_required
+    @accept_to_system_permission
+    def get(c, self, args, token):
+        """get list of user salary"""
+        lst = []
+        search = args.get("search")
+        department = args.get("department")
+        role = args.get("role")
+        if search:
+            lst.append(
+                or_(
+                    self.model.last_name.ilike(f"%{search}%"),
+                    self.model.first_name.ilike(f"%{search}%"),
+                ),
+            )
+        if department:
+            lst.append(User.department.has(Department.name == department))
+        if role:
+            lst.append(self.model.role == role)
+        return super(SalaryView, self).get(args, token, lst)
+
+
+@user.route("/salary/<int:id>/")
+class WorkScheduleByIdView(MethodView):
+
+    @user.arguments(TokenSchema, location="headers")
+    @user.response(400, ResponseSchema)
+    @user.response(200, UserSalaryRetrieveSchema)
+    @token_required
+    @accept_to_system_permission
+    def get(c, self, token, id):
+
+        user = User.get_or_404(id)
+        return user
+
+
+@user.post("/salary/transaction/<int:user_id>")
+@token_required
+@accept_to_system_permission
+@sql_exception_handler
+@user.arguments(CreateTransactionSchema)
+@user.arguments(TokenSchema, location="headers")
+@user.response(200)
+def make_transaction(c, data, token, user_id):
+    action = data.get("action")
+    comment_message = data.get("comment")
+    transaction = Transaction(
+        status=TransactionStatuses.PUBLISHED,
+        category=AccountCategories.USER,
+        amount=data.get("amount"),
+    )
+
+    user = session.query(User).get(user_id)
+    salary = Salary.query.filter_by(user_id=user_id).first()
+
+    balance_account = (
+        session.query(BalanceAccount).filter_by(name="Зарплаты постоянные").first()
+    )
+
+    if not user or not salary:
+        return jsonify({"message": "User or Salary not found"}), 404
+
+    if action == UserTransactionAction.BONUS:
+        credit_name = user.full_name
+        debit_name = "Зарплаты постоянные"
+        debit_content_type = "Salary"
+        debit_object_id = salary.id
+        credit_content_type = "BalanceAccount"
+        credit_object_id = balance_account.id
+    else:
+        credit_name = "Зарплаты постоянные"
+        debit_name = user.full_name
+        debit_content_type = "BalanceAccount"
+        debit_object_id = balance_account.id
+        credit_content_type = "Salary"
+        credit_object_id = salary.id
+
+    # Устанавливаем атрибуты транзакции
+    transaction_attrs = {
+        "debit_content_type": debit_content_type,
+        "debit_object_id": debit_object_id,
+        "credit_content_type": credit_content_type,
+        "credit_object_id": credit_object_id,
+        "credit_name": credit_name,
+        "debit_name": debit_name,
+    }
+    for attr, value in transaction_attrs.items():
+        setattr(transaction, attr, value)
+
+    session.add(transaction)
+    transaction.publish()
+    if comment_message:
+        session.flush()
+
+        comment = TransactionComment(
+            comment=comment_message,
+            user_id=c.id,
+            user_full_name=c.full_name,
+            transaction_id=transaction.id,
+        )
+        session.add(comment)
+    session.commit()
+
+    return jsonify({"message": "success!"}), 200

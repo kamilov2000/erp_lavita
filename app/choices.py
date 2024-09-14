@@ -55,8 +55,8 @@ class CreditDebitCategories(Enum):
     CASH_REGISTER = "cash_register"
     COUNTERPARTY = "counterparty"
     BALANCE_ACCOUNT = "balance_account"
-    STAFF = "staff"
-    CLIENTS = "client"
+    User = "user"
+    CLIENT = "client"
 
 
 class CrudOperations(Enum):
@@ -70,14 +70,14 @@ class SalaryFormat(Enum):
     SUPPORT_OPERATOR = "support_operator"
 
 
-class DaysOfWeek(Enum):
-    MONDAY = "monday"
-    TUESDAY = "tuesday"
-    WEDNESDAY = "wednesday"
-    THURSDAY = "thursday"
-    FRIDAY = "friday"
-    SATURDAY = "saturday"
-    SUNDAY = "sunday"
+class DaysOfWeekShort(Enum):
+    MON = "mon"
+    TUE = "tue"
+    WED = "wed"
+    THU = "thu"
+    FRI = "fri"
+    SAT = "sat"
+    SUN = "sun"
 
 
 class WorkScheduleStatus(Enum):
@@ -86,3 +86,8 @@ class WorkScheduleStatus(Enum):
     LATENESS = "lateness"
     VACATION = "vacation"
     DAY_OFF = "day_off"
+
+
+class UserTransactionAction(Enum):
+    BONUS = "bonus"
+    PENALTY = "penalty"

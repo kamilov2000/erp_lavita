@@ -19,8 +19,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.base import Base, session
-from app.choices import DaysOfWeek, SalaryFormat, Statuses, WorkScheduleStatus
-from app.utils.mixins import BalanceMixin
+from app.choices import DaysOfWeekShort, SalaryFormat, Statuses, WorkScheduleStatus
+from app.utils.mixins import BalanceMixin, HistoryMixin, TempDataMixin
 
 if TYPE_CHECKING:
     from app.invoice.models import Invoice
@@ -40,15 +40,16 @@ work_scheduler_partner_association = Table(
     Column("partner_id", Integer, ForeignKey("partner.id")),
 )
 
-working_day_partner_association = Table(
-    "working_day_partner",
-    Base.metadata,
-    Column("working_day_id", Integer, ForeignKey("working_day.id")),
-    Column("partner_id", Integer, ForeignKey("partner.id")),
-)
+
+class UserHistory(HistoryMixin, Base):
+    __tablename__ = "user_history"
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("user.id", ondelete="SET NULL"), nullable=True
+    )
+    user: Mapped["User"] = relationship(back_populates="histories")
 
 
-class User(Base):
+class User(TempDataMixin, Base):
     __tablename__ = "user"
 
     username: Mapped[str] = mapped_column(String(100), unique=True, nullable=True)
@@ -91,6 +92,9 @@ class User(Base):
     permissions: Mapped["Permission"] = relationship(
         "Permission", back_populates="user"
     )
+    histories: Mapped[list["UserHistory"]] = relationship(
+        "UserHistory", back_populates="user"
+    )
 
     @hybrid_property
     def full_name(self) -> str:
@@ -115,7 +119,7 @@ class User(Base):
 
     def create_working_days(self):
         working_days = []
-        for day in DaysOfWeek:
+        for day in DaysOfWeekShort:
             working_day = WorkingDay(day_of_week=day, user_id=self.id)
             working_days.append(working_day)
         return working_days
@@ -147,7 +151,7 @@ class Partner(Base):
     )  # Время окончания работы партнера
 
     def __repr__(self):
-        return f"<Partner(user={self.user.name}, for_half_day={self.for_half_day}, start_time={self.start_time}, end_time={self.end_time})>"
+        return f"<Partner(user={self.user.full_name}, for_half_day={self.for_half_day}, start_time={self.start_time}, end_time={self.end_time})>"
 
 
 class SalaryCalculation(Base):
@@ -171,13 +175,26 @@ class SalaryCalculation(Base):
     user: Mapped["User"] = relationship("User", back_populates="salary_calculation")
 
 
-class Department(Base):
+class DepartmentHistory(HistoryMixin, Base):
+    __tablename__ = "department_history"
+
+    department_id: Mapped[int] = mapped_column(
+        ForeignKey("department.id", ondelete="SET NULL"), nullable=True
+    )
+    department: Mapped["Department"] = relationship(back_populates="histories")
+
+
+class Department(TempDataMixin, Base):
     __tablename__ = "department"
 
     name: Mapped[str] = mapped_column(String(50), nullable=False)
 
     groups: Mapped[list["Group"]] = relationship("Group", back_populates="department")
     users: Mapped[list["User"]] = relationship("User", back_populates="department")
+
+    histories: Mapped[list["DepartmentHistory"]] = relationship(
+        "DepartmentHistory", back_populates="department"
+    )
 
 
 class Group(Base):
@@ -215,7 +232,9 @@ class WorkSchedule(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
     user: Mapped["User"] = relationship("User", back_populates="work_schedules")
 
-    working_day_id: Mapped[int] = mapped_column(Integer, ForeignKey("working_day.id"))
+    working_day_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("working_day.id"), nullable=True
+    )
     working_day: Mapped["WorkingDay"] = relationship(
         "WorkingDay", backref="working_day"
     )
@@ -252,20 +271,15 @@ class WorkingDay(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
 
-    day_of_week: Mapped["DaysOfWeek"] = mapped_column(Enum(DaysOfWeek))
+    day_of_week: Mapped["DaysOfWeekShort"] = mapped_column(Enum(DaysOfWeekShort))
     is_working_day: Mapped[bool] = mapped_column(Boolean, default=False)
 
     start_time: Mapped[time] = mapped_column(
-        Time, default=time(9, 0)
+        Time, default=time(0, 0)
     )  # Начало рабочего дня
     end_time: Mapped[time] = mapped_column(
-        Time, default=time(18, 0)
+        Time, default=time(0, 0)
     )  # Конец рабочего дня
-
-    # Связь многие ко многым с партнерами (сотрудниками)
-    partners: Mapped[List["Partner"]] = relationship(
-        "Partner", secondary=working_day_partner_association, backref="working_day"
-    )
 
     def __repr__(self):
         return f"<WorkingDay(user_id={self.user_id}, day_of_week={self.day_of_week}, is_working_day={self.is_working_day})>"

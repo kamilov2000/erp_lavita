@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy import func, types
 
 from app.base import session
-from app.choices import DaysOfWeek, WorkScheduleStatus
+from app.choices import DaysOfWeekShort, WorkScheduleStatus
 from app.finance.models import Counterparty
 from app.user.models import User, WorkingDay, WorkSchedule
 from app.utils.func import sql_exception_handler
@@ -37,15 +37,15 @@ def create_working_days_for_all_staff_task():
     all_staff = session.query(User).all()
 
     # Получаем текущее строковое представление дня недели в формате 'MONDAY', 'TUESDAY' и т.д.
-    today_string = datetime.datetime.today().strftime("%A").upper()
+    today_string = datetime.datetime.today().strftime("%a").upper()
 
     today_date = datetime.date.today()
 
-    # Преобразуем строку в элемент перечисления DaysOfWeek
-    today_enum = DaysOfWeek[today_string]
+    # Преобразуем строку в элемент перечисления DaysOfWeekShort
+    today_enum = DaysOfWeekShort[today_string]
 
     for user in all_staff:
-        # Получаем график работы из DaysOfWeek для каждого сотрудника
+        # Получаем график работы из DaysOfWeekShort для каждого сотрудника
         working_day = (
             session.query(WorkingDay)
             .filter(WorkingDay.user == user, WorkingDay.day_of_week == today_enum)
@@ -57,25 +57,27 @@ def create_working_days_for_all_staff_task():
             .filter(
                 WorkSchedule.user == user,
                 WorkSchedule.date == today_date,
-                WorkSchedule.working_day_id == working_day.id,
             )
             .first()
         )
-
+        data = {}
         if not existing_schedule:
-            # Создаем рабочий день на основе графика
-            working_schedule = WorkSchedule(
-                user=user,
-                date=today_date,
-                working_day_id=working_day.id,
-                status=(
+            if working_day:
+                # Создаем рабочий день на основе графика
+                data["working_day_id"] = working_day.id
+                data["status"] = (
                     WorkScheduleStatus.DAY_OFF
                     if not working_day.is_working_day
                     else None
-                ),
+                )
+
+            working_schedule = WorkSchedule(
+                user=user,
+                date=today_date,
+                working_day_id=data.get("working_day_id"),
+                status=data.get("status"),
             )
-            # Добавляем партнеров из графика
-            working_schedule.partners.extend(working_day.partners)
+
             session.add(working_schedule)
 
-        session.commit()
+    session.commit()

@@ -3,7 +3,14 @@ from marshmallow import validate
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, SQLAlchemySchema, auto_field
 
 from app.base import session
-from app.choices import DaysOfWeek, SalaryFormat, Statuses
+from app.choices import (
+    CrudOperations,
+    DaysOfWeekShort,
+    SalaryFormat,
+    Statuses,
+    UserTransactionAction,
+    WorkScheduleStatus,
+)
 from app.user.models import (
     Department,
     Document,
@@ -12,7 +19,9 @@ from app.user.models import (
     Permission,
     SalaryCalculation,
     User,
+    UserHistory,
     WorkingDay,
+    WorkSchedule,
 )
 from app.utils.schema import DefaultDumpsSchema, PaginationSchema
 
@@ -33,32 +42,21 @@ class PermissionForUserSchema(DefaultDumpsSchema, SQLAlchemyAutoSchema):
 
 class PartnerSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     full_name = ma.fields.Method("get_full_name")
-    role = ma.fields.Method("get_role")
 
     class Meta:
         model = Partner
-        fields = ["id", "full_name", "role"]
+        fields = ["id", "full_name", "start_time", "end_time", "for_half_day"]
 
     def get_full_name(self, obj):
-        return obj.user.full_name
-
-    def get_role(self, obj):
-        return obj.user.role
+        return obj.user.full_name if obj.user else None
 
 
 class WorkingDaySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
-    day_of_week = ma.fields.Enum(enum=DaysOfWeek, dump_only=True)
+    day_of_week = ma.fields.Enum(enum=DaysOfWeekShort, dump_only=True)
     is_working_day = ma.fields.Bool(required=True)
     start_time = ma.fields.Time(required=True)
     end_time = ma.fields.Time(required=True)
     id = ma.fields.Int(required=True)
-    partners = ma.fields.Nested(PartnerSchema(many=True), dump_only=True)
-    partners_ids = ma.fields.List(
-        ma.fields.Int(),
-        required=False,
-        load_only=True,
-        validate=[validate.Length(min=1)],
-    )
 
     class Meta:
         model = WorkingDay
@@ -67,10 +65,15 @@ class WorkingDaySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "is_working_day",
             "start_time",
             "end_time",
-            "partners_ids",
-            "partners",
             "day_of_week",
         ]
+
+
+class UserHistorySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    operation_status = ma.fields.Enum(enum=CrudOperations)
+
+    class Meta:
+        model = UserHistory
 
 
 class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -80,6 +83,8 @@ class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     permissions = ma.fields.Nested(PermissionForUserSchema())
     working_days = ma.fields.Nested(WorkingDaySchema(many=True))
     photo = ma.fields.Str(dump_only=True)
+    is_driver_salary_format = ma.fields.Bool(dump_only=True)
+    histories = ma.fields.Nested(UserHistorySchema(many=True), dump_only=True)
 
     class Meta:
         model = User
@@ -97,6 +102,7 @@ class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "working_days",
             "is_driver_salary_format",
             "photo",
+            "histories",
         ]
 
     role = auto_field(dump_only=True)
@@ -153,6 +159,14 @@ class UserQueryArgSchema(ma.Schema):
     search = ma.fields.Str()
     department = ma.fields.Str()
     status = ma.fields.Enum(enum=Statuses)
+    role = ma.fields.Str()
+
+
+class UserSalaryQueryArgSchema(ma.Schema):
+    page = ma.fields.Int(default=1)
+    limit = ma.fields.Int(default=1)
+    search = ma.fields.Str()
+    department = ma.fields.Str()
     role = ma.fields.Str()
 
 
@@ -300,6 +314,12 @@ class DocumentCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         fields = ["filename", "description", "user_id"]
 
 
+class CreateTransactionSchema(ma.Schema):
+    amount = ma.fields.Float(required=True)
+    action = ma.fields.Enum(enum=UserTransactionAction, required=True)
+    comment = ma.fields.Str(required=False)
+
+
 class DocumentUpdateListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     filepath = ma.fields.Str(dump_only=True)
     user_id = ma.fields.Int(load_only=True)
@@ -315,3 +335,114 @@ class UserIdSchema(ma.Schema):
         required=True,
         description="for attaching to User",
     )
+
+
+class WorkSchedulerList(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    start_time = ma.fields.Method("get_start_time")
+    end_time = ma.fields.Method("get_end_time")
+    day_of_week = ma.fields.Method("get_day_of_week")
+    status = ma.fields.Enum(enum=WorkScheduleStatus)
+
+    class Meta:
+        model = WorkSchedule
+        fields = ["id", "date", "status", "start_time", "end_time", "day_of_week"]
+
+    def get_start_time(self, obj):
+        return obj.working_day.start_time.strftime("%H:%M") if obj.working_day else None
+
+    def get_end_time(self, obj):
+        return obj.working_day.end_time.strftime("%H:%M") if obj.working_day else None
+
+    def get_day_of_week(self, obj):
+        return obj.working_day.day_of_week.value.upper() if obj.working_day else None
+
+
+class UsersWorkScheduleList(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    work_schedules = ma.fields.Nested(WorkSchedulerList(many=True))
+
+    class Meta:
+        model = User
+        fields = ["id", "full_name", "work_schedules"]
+
+
+class PagWorkScheduleSchema(ma.Schema):
+    data = ma.fields.Nested(UsersWorkScheduleList(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)
+
+
+class WorkScheduleArgsSchema(ma.Schema):
+    start_date = ma.fields.Date(required=False)
+    end_date = ma.fields.Date(required=False)
+    department_id = ma.fields.Int(required=False)
+    group_id = ma.fields.Int(required=False)
+    search = ma.fields.Str(required=False)
+
+
+class PartnerCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    class Meta:
+        model = Partner
+        fields = ["id", "user_id", "for_half_day", "start_time", "end_time"]
+
+
+class WorkScheduleUpdate(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    status = ma.fields.Enum(enum=WorkScheduleStatus)
+    partners = ma.fields.Nested(PartnerCreateSchema(many=True))
+
+    class Meta:
+        model = WorkSchedule
+        fields = ["id", "status", "partners"]
+
+
+class WorkScheduleRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    status = ma.fields.Enum(enum=WorkScheduleStatus)
+    partners = ma.fields.Nested(PartnerSchema(many=True))
+
+    class Meta:
+        model = WorkSchedule
+        fields = ["id", "status", "partners"]
+
+
+class UserSalaryListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    department_name = ma.fields.Method("get_department_name")
+    group_name = ma.fields.Method("get_group_name")
+    balance = ma.fields.Method("get_balance")
+    fixed_payment = ma.fields.Method("get_fixed_payment")
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "full_name",
+            "department_name",
+            "group_name",
+            "balance",
+            "fixed_payment",
+        ]
+
+    def get_department_name(self, obj):
+        return obj.department.name if obj.department else None
+
+    def get_group_name(self, obj):
+        return obj.group.name if obj.group else None
+
+    def get_balance(self, obj):
+        return obj.salary.balance if obj.salary else None
+
+    def get_fixed_payment(self, obj):
+        return obj.salary.fixed_payment if obj.salary else None
+
+
+class PagUserSalarySchema(ma.Schema):
+    data = ma.fields.Nested(UserSalaryListSchema(many=True))
+    pagination = ma.fields.Nested(PaginationSchema)
+
+
+class UserSalaryRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    balance = ma.fields.Method("get_balance")
+
+    class Meta:
+        model = User
+        fields = ["id", "balance"]
+
+    def get_balance(self, obj):
+        return obj.salary.balance if obj.salary else None

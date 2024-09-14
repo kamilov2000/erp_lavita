@@ -10,14 +10,14 @@ CATEGORY_COLLECTION = {
     "BalanceAccount": "Счета баланса",
     "Counterparty": "Контрагенты",
     "Client": "Клиенты",
-    "Staff": "Персонал",
+    "User": "Персонал",
 }
 CATEGORY_LIST = [
     "CashRegister",
     "BalanceAccount",
     "Counterparty",
     "Client",
-    "Staff",
+    "User",
 ]
 
 
