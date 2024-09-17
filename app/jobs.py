@@ -7,6 +7,7 @@ from app.choices import DaysOfWeekShort, WorkScheduleStatus
 from app.finance.models import Counterparty
 from app.user.models import User, WorkingDay, WorkSchedule
 from app.utils.func import sql_exception_handler
+from app.warehouse.models import Warehouse
 
 
 @sql_exception_handler

@@ -82,7 +82,7 @@ class Invoice(Base, InvoiceBase):
     type: Mapped[enum.Enum] = mapped_column(
         Enum(InvoiceTypes), default=InvoiceTypes.INVOICE
     )
-    number: Mapped[str]
+    number: Mapped[int]
     status: Mapped[enum.Enum] = mapped_column(
         Enum(InvoiceStatuses), default=InvoiceStatuses.DRAFT
     )
