@@ -8,7 +8,7 @@ from app.choices import CrudOperations
 class CustomMethodPaginationView(MethodView):
     model = None
 
-    def get(self, args, token, query_args=None, custom_query=None, matched_lst=None):
+    def get(self, args, query_args=None, custom_query=None, matched_lst=None):
 
         page = args.pop("page", 1)
         limit = int(args.pop("limit", 10))

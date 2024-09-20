@@ -21,7 +21,7 @@ from app.base import session
 from app.user.models import User
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 from app.warehouse.models import Warehouse
 
 
@@ -34,9 +34,8 @@ part = Blueprint(
 class PartAllView(MethodView):
     @token_required
     @part.arguments(ProductQueryArgSchema, location="query")
-    @part.arguments(TokenSchema, location="headers")
     @part.response(200, PagPartSchema)
-    def get(c, self, args, token):
+    def get(c, self, args):
         """List parts"""
         page = args.pop("page", 1)
         warehouse_id = args.pop("warehouse_id", None)
@@ -77,10 +76,9 @@ class PartAllView(MethodView):
 
     @token_required
     @part.arguments(PartSchema)
-    @part.arguments(TokenSchema, location="headers")
     @part.response(400, ResponseSchema)
     @part.response(201, PartSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new part"""
         try:
             session.add(new_data)
@@ -95,9 +93,8 @@ class PartAllView(MethodView):
 @part.route("/<part_id>/")
 class PartById(MethodView):
     @token_required
-    @part.arguments(TokenSchema, location="headers")
     @part.response(200, PartSchema)
-    def get(c, self, token, part_id):
+    def get(c, self, part_id):
         """Get part by ID"""
         try:
             item = Part.get_by_id(part_id)
@@ -107,9 +104,8 @@ class PartById(MethodView):
 
     @token_required
     @part.arguments(PartSchema)
-    @part.arguments(TokenSchema, location="headers")
     @part.response(200, PartSchema)
-    def put(c, self, update_data, token, part_id):
+    def put(c, self, update_data, part_id):
         """Update existing part"""
         try:
             item = Part.get_by_id(part_id)
@@ -121,9 +117,8 @@ class PartById(MethodView):
         return item
 
     @token_required
-    @part.arguments(TokenSchema, location="headers")
     @part.response(204)
-    def delete(c, self, token, part_id):
+    def delete(c, self, part_id):
         """Delete part"""
         try:
             Part.delete(part_id)
@@ -134,10 +129,9 @@ class PartById(MethodView):
 @part.post("/<part_id>/update_photo/")
 @token_required
 @part.arguments(PhotoSchema, location="files")
-@part.arguments(TokenSchema, location="headers")
 @part.response(400, ResponseSchema)
 @part.response(200, PartSchema)
-def change_photo(cur_user, photo, token, part_id):
+def change_photo(cur_user, photo, part_id):
     part = Part.get_by_id(part_id)
     try:
         path = hash_image_save(photo.get("photo"), "part", part_id)
@@ -155,9 +149,8 @@ def change_photo(cur_user, photo, token, part_id):
 
 @part.get("/<part_id>/warehouse-stats/")
 @token_required
-@part.arguments(TokenSchema, location="headers")
 @part.response(200, StandaloneProductWarehouseStats)
-def standalone_part_warehouse_stats(c, token, part_id):
+def standalone_part_warehouse_stats(c, part_id):
     Part.get_by_id(part_id)
     total_quantity_sum = (
         session.query(func.sum(PartLot.quantity), func.sum(PartLot.total_sum))
@@ -201,10 +194,9 @@ def standalone_part_warehouse_stats(c, token, part_id):
 
 @part.get("/<part_id>/invoice-stats/")
 @token_required
-@part.arguments(TokenSchema, location="headers")
 @part.arguments(OneProductInvoiceStatsQuery, location="query")
 @part.response(200, StandaloneProductInvoiceStats(many=True))
-def standalone_part_invoice_stats(c, token, args, part_id):
+def standalone_part_invoice_stats(c, args, part_id):
     status_filter = args.pop("status", None)
     type_filter = args.pop("type", None)
     user_id_filter = args.pop("user_id", None)

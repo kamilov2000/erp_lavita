@@ -24,7 +24,7 @@ from app.base import session
 from app.user.models import User
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 from app.warehouse.models import Warehouse
 
 
@@ -37,9 +37,8 @@ product = Blueprint(
 class ProductAllView(MethodView):
     @token_required
     @product.arguments(ProductQueryArgSchema, location="query")
-    @product.arguments(TokenSchema, location="headers")
     @product.response(200, PagProductSchema)
-    def get(c, self, args, token):
+    def get(c, self, args):
         """List products"""
         page = args.pop("page", 1)
         warehouse_id = args.pop("warehouse_id", None)
@@ -80,10 +79,9 @@ class ProductAllView(MethodView):
 
     @token_required
     @product.arguments(ProductSchema)
-    @product.arguments(TokenSchema, location="headers")
     @product.response(400, ResponseSchema)
     @product.response(201, ProductSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new product"""
         try:
             session.add(new_data)
@@ -98,9 +96,8 @@ class ProductAllView(MethodView):
 @product.route("/<product_id>/")
 class ProductById(MethodView):
     @token_required
-    @product.arguments(TokenSchema, location="headers")
     @product.response(200, ProductSchema)
-    def get(c, self, token, product_id):
+    def get(c, self, product_id):
         """Get product by ID"""
         try:
             item = Product.get_by_id(product_id)
@@ -110,9 +107,8 @@ class ProductById(MethodView):
 
     @token_required
     @product.arguments(ProductSchema)
-    @product.arguments(TokenSchema, location="headers")
     @product.response(200, ProductSchema)
-    def put(c, self, update_data, token, product_id):
+    def put(c, self, update_data, product_id):
         """Update existing product"""
         try:
             item = Product.get_by_id(product_id)
@@ -129,9 +125,8 @@ class ProductById(MethodView):
         return item
 
     @token_required
-    @product.arguments(TokenSchema, location="headers")
     @product.response(204)
-    def delete(c, self, token, product_id):
+    def delete(c, self, product_id):
         """Delete product"""
         try:
             Product.delete(product_id)
@@ -142,10 +137,9 @@ class ProductById(MethodView):
 @product.post("/<product_id>/update_photo/")
 @token_required
 @product.arguments(PhotoSchema, location="files")
-@product.arguments(TokenSchema, location="headers")
 @product.response(400, ResponseSchema)
 @product.response(200, ProductSchema)
-def change_photo(cur_user, photo, token, product_id):
+def change_photo(cur_user, photo, product_id):
     product = Product.get_by_id(product_id)
     try:
         path = hash_image_save(photo.get("photo"), "product", product_id)
@@ -163,10 +157,9 @@ def change_photo(cur_user, photo, token, product_id):
 
 @product.get("/<product_id>/markups/from_warehouse/<warehouse_id>/")
 @token_required
-@product.arguments(TokenSchema, location="headers")
 @product.response(400, ResponseSchema)
 @product.response(200, ProductUnitSchema(many=True))
-def get_product_units(cur_user, token, product_id, warehouse_id):
+def get_product_units(cur_user, product_id, warehouse_id):
     try:
         Product.get_by_id(product_id)
     except ItemNotFoundError:
@@ -194,9 +187,8 @@ def get_product_units(cur_user, token, product_id, warehouse_id):
 
 @product.get("/stats/")
 @token_required
-@product.arguments(TokenSchema, location="headers")
 @product.response(200, AllProductsStats)
-def all_product_stats(cur_user, token):
+def all_product_stats(cur_user):
     return {
         "products": Product.query.all(),
         "containers": Container.query.all(),
@@ -206,10 +198,9 @@ def all_product_stats(cur_user, token):
 
 @product.post("/check_markups/")
 @token_required
-@product.arguments(TokenSchema, location="headers")
 @product.arguments(MarkupsArray)
 @product.response(200, ResponseSchema)
-def check_markup(c, token, data):
+def check_markup(c, data):
     problem_markups = []
     for markup in data["markups"]:
         try:
@@ -225,9 +216,8 @@ def check_markup(c, token, data):
 
 @product.get("/<product_id>/warehouse-stats/")
 @token_required
-@product.arguments(TokenSchema, location="headers")
 @product.response(200, StandaloneProductWarehouseStats)
-def standalone_product_warehouse_stats(c, token, product_id):
+def standalone_product_warehouse_stats(c, product_id):
     Product.get_by_id(product_id)
     total_quantity_sum = (
         session.query(func.sum(ProductLot.quantity), func.sum(ProductLot.total_sum))
@@ -271,10 +261,9 @@ def standalone_product_warehouse_stats(c, token, product_id):
 
 @product.get("/<product_id>/invoice-stats/")
 @token_required
-@product.arguments(TokenSchema, location="headers")
 @product.arguments(OneProductInvoiceStatsQuery, location="query")
 @product.response(200, StandaloneProductInvoiceStats(many=True))
-def standalone_product_invoice_stats(c, token, args, product_id):
+def standalone_product_invoice_stats(c, args, product_id):
     status_filter = args.pop("status", None)
     type_filter = args.pop("type", None)
     user_id_filter = args.pop("user_id", None)

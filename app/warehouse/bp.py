@@ -21,7 +21,7 @@ from app.warehouse.schema import (
 )
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 
 
 warehouse = Blueprint(
@@ -33,9 +33,8 @@ warehouse = Blueprint(
 class WarehouseAllView(MethodView):
     @token_required
     @warehouse.arguments(WarehouseQueryArgSchema, location="query")
-    @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(200, PagWarehouseSchema)
-    def get(c, self, args, token):
+    def get(c, self, args):
         """List warehouses"""
         user_ids = args.pop("user_ids", None)
         page = args.pop("page", 1)
@@ -74,10 +73,9 @@ class WarehouseAllView(MethodView):
 
     @token_required
     @warehouse.arguments(WarehouseSchema)
-    @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(400, ResponseSchema)
     @warehouse.response(201, WarehouseSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new warehouse"""
         try:
             session.add(new_data)
@@ -92,9 +90,8 @@ class WarehouseAllView(MethodView):
 @warehouse.route("/<warehouse_id>/")
 class WarehouseById(MethodView):
     @token_required
-    @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(200, WarehouseDetailSchema)
-    def get(c, self, token, warehouse_id):
+    def get(c, self, warehouse_id):
         """Get warehouse by ID"""
         try:
             item = Warehouse.get_by_id(warehouse_id)
@@ -104,9 +101,8 @@ class WarehouseById(MethodView):
 
     @token_required
     @warehouse.arguments(WarehouseSchema)
-    @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(200, WarehouseSchema)
-    def put(c, self, update_data, token, warehouse_id):
+    def put(c, self, update_data, warehouse_id):
         """Update existing warehouse"""
         try:
             item = Warehouse.get_by_id(warehouse_id)
@@ -118,9 +114,8 @@ class WarehouseById(MethodView):
         return item
 
     @token_required
-    @warehouse.arguments(TokenSchema, location="headers")
     @warehouse.response(204)
-    def delete(c, self, token, warehouse_id):
+    def delete(c, self, warehouse_id):
         """Delete warehouse"""
         try:
             Warehouse.delete(warehouse_id)
@@ -130,9 +125,8 @@ class WarehouseById(MethodView):
 
 @warehouse.get("/<warehouse_id>/responsible_users/")
 @token_required
-@warehouse.arguments(TokenSchema, location="headers")
 @warehouse.response(200, UserSchema(many=True))
-def get_responsible_users(c, token, warehouse_id):
+def get_responsible_users(c, warehouse_id):
     try:
         item = Warehouse.get_by_id(warehouse_id)
     except ItemNotFoundError:
@@ -143,9 +137,8 @@ def get_responsible_users(c, token, warehouse_id):
 @warehouse.get("/<warehouse_id>/history/")
 @token_required
 @warehouse.arguments(PaginateQueryArgSchema, location="query")
-@warehouse.arguments(TokenSchema, location="headers")
 @warehouse.response(200, PagWarehouseHistorySchema)
-def get_history(c, args, token, warehouse_id):
+def get_history(c, args, warehouse_id):
     page = args.pop("page", 1)
     try:
         limit = int(args.pop("limit", 10))
@@ -190,9 +183,8 @@ def get_history(c, args, token, warehouse_id):
 
 @warehouse.get("/stats/")
 @token_required
-@warehouse.arguments(TokenSchema, location="headers")
 @warehouse.response(200, WarehouseStatsSchema)
-def get_stats(c, token):
+def get_stats(c):
     warehouses = session.execute(select(Warehouse)).scalars().all()
     total_capacity = 0
     total_price = 0

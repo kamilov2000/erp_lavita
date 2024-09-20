@@ -21,7 +21,7 @@ from app.base import session
 from app.user.models import User
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import hash_image_save, msg_response, token_required
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 from app.warehouse.models import Warehouse
 
 
@@ -34,9 +34,8 @@ container = Blueprint(
 class ContainerAllView(MethodView):
     @token_required
     @container.arguments(ProductQueryArgSchema, location="query")
-    @container.arguments(TokenSchema, location="headers")
     @container.response(200, PagContainerSchema)
-    def get(c, self, args, token):
+    def get(c, self, args):
         """List containers"""
         page = args.pop("page", 1)
         warehouse_id = args.pop("warehouse_id", None)
@@ -79,10 +78,9 @@ class ContainerAllView(MethodView):
 
     @token_required
     @container.arguments(ContainerSchema)
-    @container.arguments(TokenSchema, location="headers")
     @container.response(400, ResponseSchema)
     @container.response(201, ContainerSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new container"""
         try:
             session.add(new_data)
@@ -97,9 +95,8 @@ class ContainerAllView(MethodView):
 @container.route("/<container_id>/")
 class ContainerById(MethodView):
     @token_required
-    @container.arguments(TokenSchema, location="headers")
     @container.response(200, ContainerSchema)
-    def get(c, self, token, container_id):
+    def get(c, self, container_id):
         """Get container by ID"""
         try:
             item = Container.get_by_id(container_id)
@@ -109,9 +106,8 @@ class ContainerById(MethodView):
 
     @token_required
     @container.arguments(ContainerSchema)
-    @container.arguments(TokenSchema, location="headers")
     @container.response(200, ContainerSchema)
-    def put(c, self, update_data, token, container_id):
+    def put(c, self, update_data, container_id):
         """Update existing container"""
         try:
             item = Container.get_by_id(container_id)
@@ -123,9 +119,8 @@ class ContainerById(MethodView):
         return item
 
     @token_required
-    @container.arguments(TokenSchema, location="headers")
     @container.response(204)
-    def delete(c, self, token, container_id):
+    def delete(c, self, container_id):
         """Delete container"""
         try:
             Container.delete(container_id)
@@ -136,10 +131,9 @@ class ContainerById(MethodView):
 @container.post("/<container_id>/update_photo/")
 @token_required
 @container.arguments(PhotoSchema, location="files")
-@container.arguments(TokenSchema, location="headers")
 @container.response(400, ResponseSchema)
 @container.response(200, ContainerSchema)
-def change_photo(cur_user, photo, token, container_id):
+def change_photo(cur_user, photo, container_id):
     container = Container.get_by_id(container_id)
     try:
         path = hash_image_save(photo.get("photo"), "container", container_id)
@@ -157,9 +151,8 @@ def change_photo(cur_user, photo, token, container_id):
 
 @container.get("/<container_id>/warehouse-stats/")
 @token_required
-@container.arguments(TokenSchema, location="headers")
 @container.response(200, StandaloneProductWarehouseStats)
-def standalone_container_warehouse_stats(c, token, container_id):
+def standalone_container_warehouse_stats(c, container_id):
     Container.get_by_id(container_id)
     total_quantity_sum = (
         session.query(func.sum(ContainerLot.quantity), func.sum(ContainerLot.total_sum))
@@ -203,10 +196,9 @@ def standalone_container_warehouse_stats(c, token, container_id):
 
 @container.get("/<container_id>/invoice-stats/")
 @token_required
-@container.arguments(TokenSchema, location="headers")
 @container.arguments(OneProductInvoiceStatsQuery, location="query")
 @container.response(200, StandaloneProductInvoiceStats(many=True))
-def standalone_container_invoice_stats(c, token, args, container_id):
+def standalone_container_invoice_stats(c, args, container_id):
     status_filter = args.pop("status", None)
     type_filter = args.pop("type", None)
     user_id_filter = args.pop("user_id", None)

@@ -1,3 +1,4 @@
+from copy import deepcopy
 import datetime
 import os
 from functools import wraps
@@ -69,6 +70,9 @@ def token_required(f):
             current_user, *args, **kwargs
         )  # вот здесь декоратор возврашает модель пользователя
 
+    decorated._apidoc = deepcopy(getattr(f, "_apidoc", {}))
+    decorated._apidoc.setdefault("manual_doc", {})
+    decorated._apidoc["manual_doc"]["security"] = [{"Bearer Auth": []}]
     return decorated
 
 
@@ -90,7 +94,7 @@ def hash_image_save(
 ):
     if uploaded_file is None:
         raise ItemNotFoundError
-    ident_str = str(ident) + "_"
+    ident_str = f"{ident}_"
     UPLOAD_FOLDER = current_app.config["UPLOAD_FOLDER"]
     model_upload_path = os.path.join(UPLOAD_FOLDER, model_name)
     if not os.path.exists(model_upload_path):
@@ -108,10 +112,7 @@ def hash_image_save(
     # if allowed_extensions is not None and extension.lower() not in allowed_extensions:
     #     raise CustomError("Not allowed extension!")
     hashed_filename = (
-        ident_str
-        + sha256(secured_filename.encode("utf-8")).hexdigest()
-        + "."
-        + extension
+        f"{ident_str}{sha256(secured_filename.encode("utf-8")).hexdigest()}.{extension}"
     )
     file_path = os.path.join(model_upload_path, hashed_filename)
     uploaded_file.save(file_path)

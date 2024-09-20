@@ -18,7 +18,7 @@ from app.invoice.schema import (
 )
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 
 
 production = Blueprint(
@@ -33,9 +33,8 @@ production = Blueprint(
 class InvoiceAllView(MethodView):
     @token_required
     @production.arguments(InvoiceQueryArgSchema, location="query")
-    @production.arguments(TokenSchema, location="headers")
     @production.response(200, PagProductionSchema)
-    def get(c, self, args, token):
+    def get(c, self, args):
         """List productions"""
         page = args.pop("page", 1)
         created_at = args.pop("created_at", None)
@@ -77,11 +76,10 @@ class InvoiceAllView(MethodView):
 
     @token_required
     @production.arguments(ProductionSchema)
-    @production.arguments(TokenSchema, location="headers")
     @production.arguments(InvoiceQueryDraftSchema, location="query")
     @production.response(400, ResponseSchema)
     @production.response(201, ProductionSchema)
-    def post(c, self, new_data, token, is_draft):
+    def post(c, self, new_data, is_draft):
         """Add a new published/draft production"""
         try:
             if is_draft:
@@ -103,9 +101,8 @@ class InvoiceAllView(MethodView):
 @production.route("/<production_id>/")
 class InvoiceById(MethodView):
     @token_required
-    @production.arguments(TokenSchema, location="headers")
     @production.response(200, InvoiceDetailSchema)
-    def get(c, self, token, production_id):
+    def get(c, self, production_id):
         """Get production by ID"""
         try:
             item = Invoice.get_by_id(production_id)
@@ -115,9 +112,8 @@ class InvoiceById(MethodView):
 
     @token_required
     @production.arguments(ProductionSchema)
-    @production.arguments(TokenSchema, location="headers")
     @production.response(200, ProductionSchema)
-    def put(c, self, update_data, token, production_id):
+    def put(c, self, update_data, production_id):
         """Update existing production"""
         try:
             item = Invoice.get_by_id(production_id)
@@ -134,9 +130,8 @@ class InvoiceById(MethodView):
         return item
 
     @token_required
-    @production.arguments(TokenSchema, location="headers")
     @production.response(204)
-    def delete(c, self, token, production_id):
+    def delete(c, self, production_id):
         """Delete production"""
         try:
             Invoice.delete(production_id)
@@ -146,9 +141,8 @@ class InvoiceById(MethodView):
 
 @production.get("/<production_id>/markups_of_product/<product_id>/")
 @token_required
-@production.arguments(TokenSchema, location="headers")
 @production.response(200, ProductUnitSchema(many=True))
-def get_markups_of_product(c, token, production_id, product_id):
+def get_markups_of_product(c, production_id, product_id):
     production = Invoice.get_by_id(production_id)
     if production.type != InvoiceTypes.PRODUCTION:
         raise ItemNotFoundError(f"Not found Production with id: {production_id}")

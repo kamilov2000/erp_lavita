@@ -16,7 +16,7 @@ from app.invoice.schema import (
 )
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 
 
 invoice = Blueprint(
@@ -28,10 +28,9 @@ invoice = Blueprint(
 class InvoiceAllView(MethodView):
     @token_required
     @invoice.arguments(InvoiceQueryArgSchema, location="query")
-    @invoice.arguments(TokenSchema, location="headers")
     @invoice.response(400, ResponseSchema)
     @invoice.response(200, PagInvoiceSchema)
-    def get(c, self, args, token):
+    def get(c, self, args):
         """List invoices"""
         page = args.pop("page", 1)
         created_at = args.pop("created_at", None)
@@ -72,11 +71,10 @@ class InvoiceAllView(MethodView):
 
     @token_required
     @invoice.arguments(InvoiceSchema)
-    @invoice.arguments(TokenSchema, location="headers")
     @invoice.arguments(InvoiceQueryDraftSchema, location="query")
     @invoice.response(400, ResponseSchema)
     @invoice.response(201, InvoiceSchema)
-    def post(c, self, new_data, token, is_draft):
+    def post(c, self, new_data, is_draft):
         """Add a new published/draft invoice"""
         try:
             if is_draft:
@@ -98,9 +96,8 @@ class InvoiceAllView(MethodView):
 @invoice.route("/<invoice_id>/")
 class InvoiceById(MethodView):
     @token_required
-    @invoice.arguments(TokenSchema, location="headers")
     @invoice.response(200, InvoiceDetailSchema)
-    def get(c, self, token, invoice_id):
+    def get(c, self, invoice_id):
         """Get invoice by ID"""
         try:
             item = Invoice.get_by_id(invoice_id)
@@ -110,9 +107,8 @@ class InvoiceById(MethodView):
 
     @token_required
     @invoice.arguments(InvoiceSchema)
-    @invoice.arguments(TokenSchema, location="headers")
     @invoice.response(200, InvoiceSchema)
-    def put(c, self, update_data, token, invoice_id):
+    def put(c, self, update_data, invoice_id):
         """Update existing invoice"""
         try:
             item = Invoice.get_by_id(invoice_id)
@@ -129,9 +125,8 @@ class InvoiceById(MethodView):
         return item
 
     @token_required
-    @invoice.arguments(TokenSchema, location="headers")
     @invoice.response(204)
-    def delete(c, self, token, invoice_id):
+    def delete(c, self, invoice_id):
         """Delete invoice"""
         try:
             Invoice.delete(invoice_id)

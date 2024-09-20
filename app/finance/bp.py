@@ -52,7 +52,7 @@ from app.finance.utils import TRANSACTION_DEBIT_CREDIT_CATEGORIES
 from app.user.models import Salary
 from app.utils.func import hash_image_save, sql_exception_handler, token_required
 from app.utils.mixins import CustomMethodPaginationView
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 
 finance = Blueprint(
     "finance", __name__, url_prefix="/finance", description="operations on finance"
@@ -64,21 +64,19 @@ class PaymentTypeView(CustomMethodPaginationView):
     model = PaymentType
 
     @finance.arguments(ByNameSearchSchema, location="query")
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(200, PagPaymentTypeSchema)
     @token_required
-    def get(c, self, args, token):
+    def get(c, self, args):
         """List PaymentType"""
-        return super(PaymentTypeView, self).get(args, token)
+        return super(PaymentTypeView, self).get(args)
 
     @token_required
     @sql_exception_handler
     @finance.arguments(PaymentTypeCreateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(201, PaymentTypeCreateSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new payment_type"""
 
         payment_type = PaymentType(**new_data)
@@ -94,9 +92,8 @@ class PaymentTypeView(CustomMethodPaginationView):
 @finance.route("/payment_type/<int:id>")
 class PaymentTypeByIdView(MethodView):
     @token_required
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, PaymentTypeRetrieveUpdateSchema)
-    def get(c, self, token, id):
+    def get(c, self, id):
         """Get payment_type by ID"""
 
         item = PaymentType.get_or_404(id)
@@ -106,9 +103,8 @@ class PaymentTypeByIdView(MethodView):
     @token_required
     @sql_exception_handler
     @finance.arguments(PaymentTypeRetrieveUpdateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, PaymentTypeRetrieveUpdateSchema)
-    def put(c, self, update_data, token, id):
+    def put(c, self, update_data, id):
         """Update existing payment_type"""
         item = PaymentType.get_or_404(id)
 
@@ -123,9 +119,8 @@ class PaymentTypeByIdView(MethodView):
 
     @token_required
     @sql_exception_handler
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(204)
-    def delete(c, self, token, id):
+    def delete(c, self, id):
         """Delete payment_type"""
         payment_type = PaymentType.get_or_404(id)
         session.delete(payment_type)
@@ -139,10 +134,9 @@ class CashRegisterView(CustomMethodPaginationView):
     @token_required
     @sql_exception_handler
     @finance.arguments(CashRegisterCreateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(201, CashRegisterCreateSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new cash_register"""
         payment_types_ids = new_data.pop("payment_types_ids")
         payment_types = PaymentType.query.filter(
@@ -159,21 +153,19 @@ class CashRegisterView(CustomMethodPaginationView):
         return schema.dump(cash_register), 201
 
     @finance.arguments(ByNameSearchSchema, location="query")
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(200, PagCashRegisterSchema)
     @token_required
-    def get(c, self, args, token):
+    def get(c, self, args):
         """List cash_register"""
-        return super(CashRegisterView, self).get(args, token)
+        return super(CashRegisterView, self).get(args)
 
 
 @finance.route("/cash_register/<int:id>")
 class CashRegisterByIdView(MethodView):
     @token_required
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, CashRegisterRetrieveSchema)
-    def get(c, self, token, id):
+    def get(c, self, id):
         """Get cash_register by ID"""
 
         item = CashRegister.get_or_404(id)
@@ -182,9 +174,8 @@ class CashRegisterByIdView(MethodView):
     @token_required
     @sql_exception_handler
     @finance.arguments(CashRegisterUpdateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, CashRegisterUpdateSchema)
-    def put(c, self, update_data, token, id):
+    def put(c, self, update_data, id):
         """Update existing cash_register"""
         payment_types_ids = update_data.pop("payment_types_ids", None)
         if payment_types_ids:
@@ -208,9 +199,8 @@ class CashRegisterByIdView(MethodView):
 
     @token_required
     @sql_exception_handler
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(204)
-    def delete(c, self, token, id):
+    def delete(c, self, id):
         """Delete cash_register"""
         CashRegister.delete_with_get(id)
 
@@ -220,25 +210,23 @@ class BalanceAccountView(CustomMethodPaginationView):
     model = BalanceAccount
 
     @finance.arguments(ByNameAndCategorySearchSchema, location="query")
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(200, PagBalanceAccountSchema)
     @token_required
-    def get(c, self, args, token):
+    def get(c, self, args):
         """get list balance_account"""
         category = args.pop("category", None)
         lst = []
         if category:
             lst.append(self.model.category == category)
-        return super(BalanceAccountView, self).get(args, token, query_args=lst)
+        return super(BalanceAccountView, self).get(args, query_args=lst)
 
     @token_required
     @sql_exception_handler
     @finance.arguments(BalanceAccountCreateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(201, BalanceAccountCreateSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new balance_account"""
 
         balance_account = BalanceAccount(**new_data, category=AccountCategories.USER)
@@ -251,9 +239,8 @@ class BalanceAccountView(CustomMethodPaginationView):
 @finance.route("/balance_account/<int:id>")
 class BalanceAccountByIdView(MethodView):
     @token_required
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, BalanceAccountRetrieveSchema)
-    def get(c, self, token, id):
+    def get(c, self, id):
         """Get balance_account by ID"""
 
         item = BalanceAccount.get_or_404(id)
@@ -263,9 +250,8 @@ class BalanceAccountByIdView(MethodView):
     @token_required
     @sql_exception_handler
     @finance.arguments(BalanceAccountUpdateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, BalanceAccountUpdateSchema)
-    def put(c, self, update_data, token, id):
+    def put(c, self, update_data, id):
         """Update existing balance_account"""
 
         item = BalanceAccount.get_or_404(id)
@@ -287,9 +273,8 @@ class BalanceAccountByIdView(MethodView):
 
     @token_required
     @sql_exception_handler
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(204)
-    def delete(c, self, token, id):
+    def delete(c, self, id):
         """Delete balance_account"""
         item = BalanceAccount.get_or_404(id)
         if item.category == AccountCategories.SYSTEM:
@@ -315,11 +300,10 @@ class TransactionView(CustomMethodPaginationView):
     model = Transaction
 
     @finance.arguments(TransactionArgsSchema, location="query")
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(200, PagTransactionSchema)
     @token_required
-    def get(c, self, args, token):
+    def get(c, self, args):
         """get list transaction"""
 
         search_term: str = args.pop("search", None)
@@ -363,16 +347,15 @@ class TransactionView(CustomMethodPaginationView):
                 )
             )
         return super(TransactionView, self).get(
-            args, token, query_args=lst, custom_query=custom_query
+            args, query_args=lst, custom_query=custom_query
         )
 
     @token_required
     @sql_exception_handler
     @finance.arguments(TransactionCreateUpdateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(201, TransactionCreateUpdateSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new transaction"""
         new_data["credit_content_type"] = new_data.pop("credit_category")
         new_data["debit_content_type"] = new_data.pop("debit_category")
@@ -433,9 +416,8 @@ def cancel_transaction(c, id):
 @finance.route("/transaction/<int:id>")
 class TransactionByIdView(MethodView):
     @token_required
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, TransactionRetrieveSchema)
-    def get(c, self, token, id):
+    def get(c, self, id):
         """Get transaction by ID"""
 
         item = Transaction.get_or_404(id)
@@ -445,9 +427,8 @@ class TransactionByIdView(MethodView):
     @token_required
     @sql_exception_handler
     @finance.arguments(TransactionCreateUpdateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, TransactionCreateUpdateSchema)
-    def put(c, self, update_data, token, id):
+    def put(c, self, update_data, id):
         """Update existing Transaction"""
 
         item = Transaction.get_or_404(id)
@@ -500,11 +481,10 @@ class CounterpartyView(CustomMethodPaginationView):
     model = Counterparty
 
     @finance.arguments(CounterpartyArgsSchema, location="query")
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(200, PagCounterpartySchema)
     @token_required
-    def get(c, self, args, token):
+    def get(c, self, args):
         """get list counterparty"""
         created_date = args.pop("created_date", None)
         category = args.pop("category", None)
@@ -515,15 +495,14 @@ class CounterpartyView(CustomMethodPaginationView):
         if category:
             lst.append(self.model.category == category)
 
-        return super(CounterpartyView, self).get(args, token, query_args=lst)
+        return super(CounterpartyView, self).get(args, query_args=lst)
 
     @token_required
     @sql_exception_handler
     @finance.arguments(CounterpartySchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(201, CounterpartySchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new counterparty"""
         counterparty = Counterparty(**new_data, category=AccountCategories.USER)
         session.add(counterparty)
@@ -536,9 +515,8 @@ class CounterpartyView(CustomMethodPaginationView):
 @finance.route("/counterparty/<int:id>")
 class CounterPartyByIdView(MethodView):
     @token_required
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, CounterpartyRetrieveSchema)
-    def get(c, self, token, id):
+    def get(c, self, id):
         """Get counterparty by ID"""
 
         item = Counterparty.get_or_404(id)
@@ -547,9 +525,8 @@ class CounterPartyByIdView(MethodView):
     @token_required
     @sql_exception_handler
     @finance.arguments(CounterpartyUpdateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, CounterpartyUpdateSchema)
-    def put(c, self, update_data, token, id):
+    def put(c, self, update_data, id):
         """Update existing counterparty"""
 
         item = Counterparty.get_or_404(id)
@@ -571,9 +548,8 @@ class CounterPartyByIdView(MethodView):
 
     @token_required
     @sql_exception_handler
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(204)
-    def delete(c, self, token, id):
+    def delete(c, self, id):
         """Delete counterparty"""
         counterparty = Counterparty.get_or_404(id)
         if counterparty.can_delete_and_edit:
@@ -592,28 +568,28 @@ class CounterPartyByIdView(MethodView):
 
 @finance.route("/attached_file/<int:id>/")
 class AttachedFileView(MethodView):
-
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(200, AttachedFileSchema)
     @token_required
-    def get(c, self, token, id):
+    def get(c, self, id):
 
         documents = AttachedFile.get_or_404(id)
         return documents
 
     @sql_exception_handler
-    @finance.arguments(TokenSchema, location="headers")
     @finance.arguments(AttachedFileSchema, location="form")
     @finance.response(400, ResponseSchema)
     @finance.response(200, AttachedFileSchema)
     @token_required
-    def put(c, self, token, update_data, id):
+    def put(c, self, update_data, id):
         """update file for counter_party
 
-        ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов через 'multipart/form-data'.
-        Для отправки файла используйте Postman или другой инструмент, поддерживающий отправку файлов через форму.
-        Обязательно передавайте файл в поле 'file', и укажите остальные параметры, такие как 'filename' и 'description'.
+        ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов
+        через 'multipart/form-data'.
+        Для отправки файла используйте Postman или другой инструмент,
+        поддерживающий отправку файлов через форму.
+        Обязательно передавайте файл в поле 'file', и укажите остальные параметры,
+        такие как 'filename' и 'description'.
         """
         file = request.files.get("file", None)
         if not file:
@@ -636,8 +612,7 @@ class AttachedFileView(MethodView):
     @token_required
     @sql_exception_handler
     @finance.response(204)
-    @finance.arguments(TokenSchema, location="headers")
-    def delete(c, self, token, id):
+    def delete(c, self, id):
         """Delete attached_file"""
         AttachedFile.delete_with_get(id)
 
@@ -646,15 +621,17 @@ class AttachedFileView(MethodView):
 @token_required
 @sql_exception_handler
 @finance.arguments(AttachedFileSchema, location="form")
-@finance.arguments(TokenSchema, location="headers")
 @finance.response(200, AttachedFileSchema)
-def create_attach_file(c, new_data, token):
+def create_attach_file(c, new_data):
     """
     Add a new attached_file to a counterparty
 
-     ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов через 'multipart/form-data'.
-     Для отправки файла используйте Postman или другой инструмент, поддерживающий отправку файлов через форму.
-     Обязательно передавайте файл в поле 'file', и укажите остальные параметры, такие как 'filename' и 'description'.
+     ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов
+     через 'multipart/form-data'.
+     Для отправки файла используйте Postman или другой инструмент,
+     поддерживающий отправку файлов через форму.
+     Обязательно передавайте файл в поле 'file', и укажите остальные параметры,
+     такие как 'filename' и 'description'.
     """
     file = request.files.get("file", None)
     if not file:
@@ -677,11 +654,10 @@ class TaxRateView(CustomMethodPaginationView):
     model = TaxRate
 
     @finance.arguments(TaxRateArgsSchema, location="query")
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(200, PagTaxRateSchema)
     @token_required
-    def get(c, self, args, token):
+    def get(c, self, args):
         """get list tax_rate"""
         category = args.pop("category", None)
         payment_type_name = args.pop("payment_type_name", None)
@@ -699,16 +675,15 @@ class TaxRateView(CustomMethodPaginationView):
             )
 
         return super(TaxRateView, self).get(
-            args, token, query_args=lst, custom_query=custom_query
+            args, query_args=lst, custom_query=custom_query
         )
 
     @token_required
     @sql_exception_handler
     @finance.arguments(TaxRateCreateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(400, ResponseSchema)
     @finance.response(201, TaxRateCreateSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new tax_rate"""
         payment_types_ids = new_data.pop("payment_types_ids")
         payment_types = PaymentType.query.filter(
@@ -726,9 +701,8 @@ class TaxRateView(CustomMethodPaginationView):
 @finance.route("/tax_rate/<int:id>")
 class TaxRateIdView(MethodView):
     @token_required
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, TaxRateRetrieveSchema)
-    def get(c, self, token, id):
+    def get(c, self, id):
         """Get tax_rate by ID"""
 
         item = TaxRate.get_or_404(id)
@@ -737,9 +711,8 @@ class TaxRateIdView(MethodView):
     @token_required
     @sql_exception_handler
     @finance.arguments(TaxRateUpdateSchema)
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(200, TaxRateUpdateSchema)
-    def put(c, self, update_data, token, id):
+    def put(c, self, update_data, id):
         """Update existing counterparty"""
 
         item = TaxRate.get_or_404(id)
@@ -764,8 +737,7 @@ class TaxRateIdView(MethodView):
 
     @token_required
     @sql_exception_handler
-    @finance.arguments(TokenSchema, location="headers")
     @finance.response(204)
-    def delete(c, self, token, id):
+    def delete(c, self, id):
         """Delete tax_rate"""
         TaxRate.delete_with_get(id)

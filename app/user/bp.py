@@ -61,7 +61,7 @@ from app.utils.func import (
     token_required,
 )
 from app.utils.mixins import CustomMethodPaginationView
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 
 user = Blueprint(
     "user", __name__, url_prefix="/user", description="operations on users"
@@ -133,9 +133,8 @@ def register(data):
 class UserByIdView(MethodView):
     @token_required
     @accept_to_system_permission
-    @user.arguments(TokenSchema, location="headers")
     @user.response(200, UserSchema)
-    def get(c, self, token, id):
+    def get(c, self, id):
         user = User.get_or_404(id)
         return user
 
@@ -143,15 +142,16 @@ class UserByIdView(MethodView):
     @accept_to_system_permission
     @sql_exception_handler
     @user.arguments(UserSchema)
-    @user.arguments(TokenSchema, location="headers")
     @user.response(200, UserSchema)
-    def patch(c, self, update_data, token, id):
+    def patch(c, self, update_data, id):
         """
         partly or whole updates for user segments.
         Send only that data which is need to update!
 
-        ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов через 'multipart/form-data'.
-        Для отправки файла используйте Postman или другой инструмент, поддерживающий отправку файлов через форму.
+        ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов
+        через 'multipart/form-data'.
+        Для отправки файла используйте Postman или другой инструмент,
+        поддерживающий отправку файлов через форму.
         Обязательно передавайте файл в поле 'photo', и укажите остальные параметры.
         """
         photo = request.files.get("photo")
@@ -196,9 +196,8 @@ class UserView(CustomMethodPaginationView):
     @token_required
     @accept_to_system_permission
     @user.arguments(UserQueryArgSchema, location="query")
-    @user.arguments(TokenSchema, location="headers")
     @user.response(200, PagUserSchema)
-    def get(c, self, args, token):
+    def get(c, self, args):
         """get user list"""
         lst = []
         search = args.get("search")
@@ -218,16 +217,15 @@ class UserView(CustomMethodPaginationView):
             lst.append(self.model.status == status)
         if role:
             lst.append(self.model.role == role)
-        return super(UserView, self).get(args, token, lst)
+        return super(UserView, self).get(args, lst)
 
     @token_required
     @accept_to_system_permission
     @sql_exception_handler
     @user.arguments(UserCreateSchema)
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(201, UserCreateSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new user"""
         user = User(**new_data)
         schema = UserCreateSchema()
@@ -244,24 +242,22 @@ class DepartmentView(CustomMethodPaginationView):
     model = Department
 
     @user.arguments(DepartmentArgsSchema, location="query")
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(200, PagDepartmentSchema)
     @token_required
     @accept_to_system_permission
-    def get(c, self, args, token):
+    def get(c, self, args):
         """get list department"""
 
-        return super(DepartmentView, self).get(args, token)
+        return super(DepartmentView, self).get(args)
 
     @token_required
     @accept_to_system_permission
     @sql_exception_handler
     @user.arguments(DepartmentCreateSchema)
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(201, DepartmentCreateSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new department"""
         item = Department(**new_data)
         schema = DepartmentSchema()
@@ -275,9 +271,8 @@ class DepartmentView(CustomMethodPaginationView):
 class DepartmentIdView(MethodView):
     @token_required
     @accept_to_system_permission
-    @user.arguments(TokenSchema, location="headers")
     @user.response(200, DepartmentRetrieveSchema)
-    def get(c, self, token, id):
+    def get(c, self, id):
         """Get department by ID"""
 
         item = Department.get_or_404(id)
@@ -287,9 +282,8 @@ class DepartmentIdView(MethodView):
     @accept_to_system_permission
     @sql_exception_handler
     @user.arguments(DepartmentUpdateSchema)
-    @user.arguments(TokenSchema, location="headers")
     @user.response(200, DepartmentSchema)
-    def put(c, self, update_data, token, id):
+    def put(c, self, update_data, id):
         """Update existing department"""
         item = Department.get_or_404(id)
 
@@ -302,9 +296,8 @@ class DepartmentIdView(MethodView):
     @token_required
     @accept_to_system_permission
     @sql_exception_handler
-    @user.arguments(TokenSchema, location="headers")
     @user.response(204)
-    def delete(c, self, token, id):
+    def delete(c, self, id):
         """Delete department"""
         Department.delete_with_get(id)
 
@@ -314,27 +307,25 @@ class GroupView(CustomMethodPaginationView):
     model = Group
 
     @user.arguments(GroupArgsSchema, location="query")
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(200, PagGroupSchema)
     @token_required
     @accept_to_system_permission
-    def get(c, self, args, token):
+    def get(c, self, args):
         """get list group"""
         department_id = args.get("department_id")
         lst = []
         if department_id:
             lst.append((self.model.department_id == department_id))
-        return super(GroupView, self).get(args, token, lst)
+        return super(GroupView, self).get(args, lst)
 
     @token_required
     @accept_to_system_permission
     @sql_exception_handler
     @user.arguments(GroupCreateSchema)
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(201, GroupCreateSchema)
-    def post(c, self, new_data, token):
+    def post(c, self, new_data):
         """Add a new group"""
         department_id = new_data.get("department_id")
         user_ids = new_data.pop("user_ids", None)
@@ -356,9 +347,8 @@ class GroupIdView(MethodView):
     @accept_to_system_permission
     @sql_exception_handler
     @user.arguments(GroupUpdateSchema)
-    @user.arguments(TokenSchema, location="headers")
     @user.response(200, GroupSchema)
-    def put(c, self, update_data, token, id):
+    def put(c, self, update_data, id):
         department_id = update_data.get("department_id")
         user_ids = update_data.pop("user_ids", None)
         users = User.query.filter(User.id.in_(user_ids)).all()
@@ -378,9 +368,8 @@ class GroupIdView(MethodView):
     @token_required
     @accept_to_system_permission
     @sql_exception_handler
-    @user.arguments(TokenSchema, location="headers")
     @user.response(204)
-    def delete(c, self, token, id):
+    def delete(c, self, id):
         """Delete group"""
         Group.delete_with_get(id)
 
@@ -388,28 +377,29 @@ class GroupIdView(MethodView):
 @user.route("/document/<int:id>/")
 class DocumentView(MethodView):
 
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(200, DocumentUpdateListSchema)
     @token_required
     @accept_to_system_permission
-    def get(c, self, token, id):
+    def get(c, self, id):
 
         documents = Document.get_or_404(id)
         return documents
 
     @sql_exception_handler
-    @user.arguments(TokenSchema, location="headers")
     @user.arguments(DocumentUpdateListSchema, location="form")
     @user.response(400, ResponseSchema)
     @user.response(200, DocumentUpdateListSchema)
     @token_required
-    def put(c, self, token, update_data, id):
+    def put(c, self, update_data, id):
         """update document for user
 
-        ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов через 'multipart/form-data'.
-        Для отправки файла используйте Postman или другой инструмент, поддерживающий отправку файлов через форму.
-        Обязательно передавайте файл в поле 'file', и укажите остальные параметры, такие как 'filename' и 'description'.
+        ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов
+        через 'multipart/form-data'.
+        Для отправки файла используйте Postman или другой инструмент,
+        поддерживающий отправку файлов через форму.
+        Обязательно передавайте файл в поле 'file', и укажите остальные параметры,
+        такие как 'filename' и 'description'.
         """
         file = request.files.get("file", None)
         if not file:
@@ -430,8 +420,7 @@ class DocumentView(MethodView):
     @token_required
     @sql_exception_handler
     @user.response(204)
-    @user.arguments(TokenSchema, location="headers")
-    def delete(c, self, token, id):
+    def delete(c, self, id):
         """Delete attached_file"""
         Document.delete_with_get(id)
 
@@ -440,15 +429,17 @@ class DocumentView(MethodView):
 @token_required
 @sql_exception_handler
 @user.arguments(DocumentCreateSchema, location="form")
-@user.arguments(TokenSchema, location="headers")
 @user.response(200, DocumentCreateSchema)
-def create_document(c, new_data, token):
+def create_document(c, new_data):
     """
     Add a new document to a user
 
-     ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов через 'multipart/form-data'.
-     Для отправки файла используйте Postman или другой инструмент, поддерживающий отправку файлов через форму.
-     Обязательно передавайте файл в поле 'file', и укажите остальные параметры, такие как 'filename' и 'description'.
+     ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов
+     через 'multipart/form-data'.
+     Для отправки файла используйте Postman или другой инструмент, поддерживающий
+     отправку файлов через форму.
+     Обязательно передавайте файл в поле 'file', и укажите остальные параметры,
+     такие как 'filename' и 'description'.
     """
     file = request.files.get("file", None)
     if not file:
@@ -466,8 +457,7 @@ def create_document(c, new_data, token):
 @token_required
 @user.arguments(UserIdSchema, location="query")
 @sql_exception_handler
-@user.arguments(TokenSchema, location="headers")
-def list_document(c, args, token):
+def list_document(c, args):
     user_id = args.get("user_id")
     documents = Document.query.filter_by(user_id=user_id).all()
     schema = DocumentUpdateListSchema()
@@ -479,12 +469,11 @@ class WorkScheduleView(CustomMethodPaginationView):
     model = User
 
     @user.arguments(WorkScheduleArgsSchema, location="query")
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(200, PagWorkScheduleSchema)
     @token_required
     @accept_to_system_permission
-    def get(c, self, args, token):
+    def get(c, self, args):
         """get list work_schedules"""
         current_year = datetime.date.today().year
         current_month = datetime.date.today().month
@@ -517,31 +506,27 @@ class WorkScheduleView(CustomMethodPaginationView):
                     self.model.first_name.ilike(f"%{search}%"),
                 ),
             )
-        return super(WorkScheduleView, self).get(
-            args, token, lst, custom_query=custom_query
-        )
+        return super(WorkScheduleView, self).get(args, lst, custom_query=custom_query)
 
 
 @user.route("/work_schedule/<int:id>/")
 class WorkScheduleByIdView(MethodView):
 
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(200, WorkScheduleRetrieveSchema)
     @token_required
     @accept_to_system_permission
-    def get(c, self, token, id):
+    def get(c, self, id):
 
         item = WorkSchedule.get_or_404(id)
         return item
 
     @sql_exception_handler
-    @user.arguments(TokenSchema, location="headers")
     @user.arguments(WorkScheduleUpdate)
     @user.response(400, ResponseSchema)
     @user.response(200, WorkScheduleUpdate)
     @token_required
-    def put(c, self, token, update_data, id):
+    def put(c, self, update_data, id):
         """update work_schedule for user"""
         partners = update_data.pop("partners", None)
 
@@ -575,12 +560,11 @@ class SalaryView(CustomMethodPaginationView):
     model = User
 
     @user.arguments(UserSalaryQueryArgSchema, location="query")
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(200, PagUserSalarySchema)
     @token_required
     @accept_to_system_permission
-    def get(c, self, args, token):
+    def get(c, self, args):
         """get list of user salary"""
         lst = []
         search = args.get("search")
@@ -597,18 +581,17 @@ class SalaryView(CustomMethodPaginationView):
             lst.append(User.department.has(Department.name == department))
         if role:
             lst.append(self.model.role == role)
-        return super(SalaryView, self).get(args, token, lst)
+        return super(SalaryView, self).get(args, lst)
 
 
 @user.route("/salary/<int:id>/")
-class WorkScheduleByIdView(MethodView):
+class WorkScheduleSalaryByIdView(MethodView):
 
-    @user.arguments(TokenSchema, location="headers")
     @user.response(400, ResponseSchema)
     @user.response(200, UserSalaryRetrieveSchema)
     @token_required
     @accept_to_system_permission
-    def get(c, self, token, id):
+    def get(c, self, id):
 
         user = User.get_or_404(id)
         return user
@@ -619,9 +602,8 @@ class WorkScheduleByIdView(MethodView):
 @accept_to_system_permission
 @sql_exception_handler
 @user.arguments(CreateTransactionSchema)
-@user.arguments(TokenSchema, location="headers")
 @user.response(200)
-def make_transaction(c, data, token, user_id):
+def make_transaction(c, data, user_id):
     action = data.get("action")
     comment_message = data.get("comment")
     transaction = Transaction(

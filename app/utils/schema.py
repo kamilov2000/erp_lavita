@@ -12,15 +12,6 @@ class ResponseSchema(ma.Schema):
     error = ma.fields.Raw()
 
 
-class TokenSchema(ma.Schema):
-    x_access_token = ma.fields.Str(
-        data_key="x-access-token",
-        required=True,
-        description="Access token for authentication",
-        example="your_access_token_here",
-    )
-
-
 class DefaultDumpsSchema:
 
     id = auto_field(dump_only=True)

@@ -16,7 +16,7 @@ from app.invoice.schema import (
 )
 from app.base import session
 from app.utils.exc import ItemNotFoundError
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 
 
 transfer = Blueprint(
@@ -28,9 +28,8 @@ transfer = Blueprint(
 class InvoiceAllView(MethodView):
     @token_required
     @transfer.arguments(InvoiceQueryArgSchema, location="query")
-    @transfer.arguments(TokenSchema, location="headers")
     @transfer.response(200, PagTransferSchema)
-    def get(c, self, args, token):
+    def get(c, self, args):
         """List transfers"""
         page = args.pop("page", 1)
         created_at = args.pop("created_at", None)
@@ -72,11 +71,10 @@ class InvoiceAllView(MethodView):
 
     @token_required
     @transfer.arguments(TransferSchema)
-    @transfer.arguments(TokenSchema, location="headers")
     @transfer.arguments(InvoiceQueryDraftSchema, location="query")
     @transfer.response(400, ResponseSchema)
     @transfer.response(201, TransferSchema)
-    def post(c, self, new_data, token, is_draft):
+    def post(c, self, new_data, is_draft):
         """Add a new published/draft transfer"""
         try:
             if is_draft:
@@ -98,9 +96,8 @@ class InvoiceAllView(MethodView):
 @transfer.route("/<transfer_id>/")
 class InvoiceById(MethodView):
     @token_required
-    @transfer.arguments(TokenSchema, location="headers")
     @transfer.response(200, InvoiceDetailSchema)
-    def get(c, self, token, transfer_id):
+    def get(c, self, transfer_id):
         """Get transfer by ID"""
         try:
             item = Invoice.get_by_id(transfer_id)
@@ -110,9 +107,8 @@ class InvoiceById(MethodView):
 
     @token_required
     @transfer.arguments(TransferSchema)
-    @transfer.arguments(TokenSchema, location="headers")
     @transfer.response(200, TransferSchema)
-    def put(c, self, update_data, token, transfer_id):
+    def put(c, self, update_data, transfer_id):
         """Update existing transfer"""
         try:
             item = Invoice.get_by_id(transfer_id)
@@ -129,9 +125,8 @@ class InvoiceById(MethodView):
         return item
 
     @token_required
-    @transfer.arguments(TokenSchema, location="headers")
     @transfer.response(204)
-    def delete(c, self, token, transfer_id):
+    def delete(c, self, transfer_id):
         """Delete transfer"""
         try:
             Invoice.delete(transfer_id)

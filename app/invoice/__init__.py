@@ -14,7 +14,7 @@ from app.invoice.schema import (
 )
 from app.utils.exc import ItemNotFoundError
 from app.utils.func import cancel_invoice, hash_image_save, msg_response, token_required
-from app.utils.schema import ResponseSchema, TokenSchema
+from app.utils.schema import ResponseSchema
 from app.base import session
 from .bp import invoice as invoice_bp
 from app.invoice.expense.bp import expense as expense_bp
@@ -26,10 +26,9 @@ def register_update_photos_route(bp, route, response_schema):
     @bp.route(route, methods=["POST"])
     @token_required
     @bp.arguments(FileWebSchema, location="files")
-    @bp.arguments(TokenSchema, location="headers")
     @bp.response(400, ResponseSchema)
     @bp.response(200, response_schema)
-    def change_photo(cur_user, data, token, invoice_id):
+    def change_photo(cur_user, data, invoice_id):
         invoice = Invoice.get_by_id(invoice_id)
         photo_files = data.get("files")
         array = []
@@ -63,10 +62,9 @@ def register_add_comment_route(bp, route):
     @bp.post(route)
     @token_required
     @bp.arguments(InvoiceCommentSchema)
-    @bp.arguments(TokenSchema, location="headers")
     @bp.response(400, ResponseSchema)
     @bp.response(200, InvoiceCommentSchema)
-    def add_comment(cur_user, data, token, invoice_id):
+    def add_comment(cur_user, data, invoice_id):
         try:
             data.user_id = cur_user.id
             data.invoice_id = invoice_id
@@ -82,10 +80,9 @@ def register_add_comment_route(bp, route):
 def register_cancel_invoice_route(bp, route):
     @bp.post(route)
     @token_required
-    @bp.arguments(TokenSchema, location="headers")
     @bp.response(400, ResponseSchema)
     @bp.response(200, ResponseSchema)
-    def cancel_invoice_route(cur_user, token, invoice_id):
+    def cancel_invoice_route(cur_user, invoice_id):
         try:
             invoice = Invoice.get_by_id(invoice_id)
             cancel_invoice(invoice_id)
@@ -101,10 +98,9 @@ def register_cancel_invoice_route(bp, route):
 def register_publish_invoice_route(bp, route):
     @bp.post(route)
     @token_required
-    @bp.arguments(TokenSchema, location="headers")
     @bp.response(400, ResponseSchema)
     @bp.response(200, ResponseSchema)
-    def publish_invoice(cur_user, token, invoice_id):
+    def publish_invoice(cur_user, invoice_id):
         try:
             invoice = Invoice.get_by_id(invoice_id)
         except ItemNotFoundError:
@@ -135,10 +131,9 @@ def register_publish_invoice_route(bp, route):
 def register_get_logs_route(bp, route):
     @bp.get(route)
     @token_required
-    @bp.arguments(TokenSchema, location="headers")
     @bp.response(400, ResponseSchema)
     @bp.response(200, InvoiceLogSchema(many=True))
-    def get_logs(cur_user, token, invoice_id):
+    def get_logs(cur_user, invoice_id):
         try:
             invoice = Invoice.get_by_id(invoice_id)
             return invoice.logs if invoice.logs else []
@@ -151,10 +146,9 @@ def register_get_logs_route(bp, route):
 def register_get_comments_route(bp, route):
     @bp.get(route)
     @token_required
-    @bp.arguments(TokenSchema, location="headers")
     @bp.response(400, ResponseSchema)
     @bp.response(200, InvoiceCommentSchema(many=True))
-    def get_comments(cur_user, token, invoice_id):
+    def get_comments(cur_user, invoice_id):
         try:
             invoice = Invoice.get_by_id(invoice_id)
             return invoice.comments if invoice.comments else []
