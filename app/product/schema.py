@@ -262,7 +262,6 @@ class PartStatSchema(SQLAlchemySchema):
                 Invoice.status == InvoiceStatuses.PUBLISHED,
             )
         ).scalar()
-        print(res)
         return res
 
     @staticmethod

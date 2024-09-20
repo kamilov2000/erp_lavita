@@ -31,7 +31,6 @@ class BaseInvoiceSchema:
 
     @ma.post_load
     def calc_price(self, data, **kwargs):
-        print("ITS POSt LOAD")
         current_app.logger.error(data)
         data.pop("product_unit_ids", [])
         data.pop("additionalProp1", None)

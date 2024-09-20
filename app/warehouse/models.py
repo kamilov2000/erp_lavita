@@ -119,7 +119,6 @@ class Warehouse(Base):
             for invoice in self.invoice_receivers:
                 if invoice.status == InvoiceStatuses.PUBLISHED:
                     arr.extend(invoice.get_products())
-        print(arr)
         return list(set(arr))
 
     def get_containers(self):
