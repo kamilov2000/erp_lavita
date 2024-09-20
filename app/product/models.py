@@ -93,7 +93,7 @@ class Container(Base):
     parts_r: Mapped[List["ContainerPart"]] = relationship(back_populates="container")
 
     @staticmethod
-    def decrease(container_id, decrease_quantity, transfer=False):
+    def decrease(container_id, decrease_quantity, warehouse_id, transfer=False):
         if decrease_quantity <= 0:
             return
         lots = (
@@ -102,6 +102,7 @@ class Container(Base):
                 ContainerLot.container_id == container_id,
                 Invoice.status == InvoiceStatuses.PUBLISHED,
                 Invoice.type != InvoiceTypes.EXPENSE,
+                Invoice.warehouse_sender_id == warehouse_id
             )
             .order_by(ContainerLot.created_at.asc())
             .all()
@@ -166,11 +167,14 @@ class Part(Base):
     description: Mapped[str]
 
     @staticmethod
-    def decrease(part_id, decrease_quantity, transfer=False):
+    def decrease(part_id, decrease_quantity, warehouse_id, transfer=False):
         if decrease_quantity <= 0:
             return
         lots = (
-            PartLot.query.where(PartLot.part_id == part_id)
+            PartLot.query.join(Invoice, PartLot.invoice_id == Invoice.id)
+            .where(
+                PartLot.part_id == part_id, Invoice.warehouse_sender_id == warehouse_id
+            )
             .order_by(PartLot.created_at.asc())
             .all()
         )

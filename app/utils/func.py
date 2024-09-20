@@ -149,17 +149,24 @@ def cancel_invoice(invoice_id):
 
             # Восстановление количества контейнеров
             for container_lot in invoice.container_lots:
-                container = Container.decrease(
-                    container_lot.container_id, container_lot.quantity
+                Container.decrease(
+                    container_lot.container_id,
+                    container_lot.quantity,
+                    warehouse_id=invoice.warehouse_sender_id,
                 )
-                if container:
-                    container.quantity -= container_lot.quantity
 
             # Восстановление количества частей
             for part_lot in invoice.part_lots:
-                part = Part.query.get(part_lot.part_id)
-                if part:
-                    part.quantity -= part_lot.quantity
+                Part.decrease(
+                    part_lot.part_id,
+                    part_lot.quantity,
+                    invoice.warehouse_sender_id,
+                )
+        if invoice.type == InvoiceTypes.TRANSFER:
+            invoice.warehouse_sender_id, invoice.warehouse_receiver_id = (
+                invoice.warehouse_receiver_id,
+                invoice.warehouse_sender_id
+            )
 
     # Изменение статуса инвойса на "отменён"
     invoice.status = InvoiceStatuses.CANCELED
