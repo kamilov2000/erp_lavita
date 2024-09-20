@@ -114,6 +114,50 @@ class Invoice(Base, InvoiceBase):
         MutableDict.as_mutable(JSONEncodedDict)
     )
 
+    def update_fields(self):
+        self.quantity = self.available_quantity()
+        self.price = self.available_price()
+
+    def available_quantity(self):
+        total_quantity = 0
+
+        # Суммируем количество в product_lots
+        for product_lot in self.product_lots:
+            if product_lot.quantity:
+                total_quantity += product_lot.quantity
+
+        # Суммируем количество в container_lots
+        for container_lot in self.container_lots:
+            if container_lot.quantity:
+                total_quantity += container_lot.quantity
+
+        # Суммируем количество в part_lots
+        for part_lot in self.part_lots:
+            if part_lot.quantity:
+                total_quantity += part_lot.quantity
+
+        return total_quantity
+
+    def available_price(self):
+        total_price = 0
+
+        # Суммируем количество в product_lots
+        for product_lot in self.product_lots:
+            if product_lot.total_sum:
+                total_price += product_lot.total_sum
+
+        # Суммируем количество в container_lots
+        for container_lot in self.container_lots:
+            if container_lot.total_sum:
+                total_price += container_lot.total_sum
+
+        # Суммируем количество в part_lots
+        for part_lot in self.part_lots:
+            if part_lot.total_sum:
+                total_price += part_lot.total_sum
+
+        return total_price
+
 
 class InvoiceComment(Base):
     __tablename__ = "invoice_comment"

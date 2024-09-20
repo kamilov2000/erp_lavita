@@ -362,7 +362,7 @@ class MarkupFilter(Base):
             .join(markup_markup_filter, Markup.id == markup_markup_filter.c.markup_id)
             .filter(
                 markup_markup_filter.c.markup_filter_id == markup_filter_id,
-                Markup.is_used == False,
+                Markup.is_used.is_(False),
             )
             .all()
         )

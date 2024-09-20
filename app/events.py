@@ -34,7 +34,7 @@ def create_history_data(model: Base, action, target, extra_fields):
     return res
 
 
-def register_events():
+def register_events():  # noqa: C901
     @event.listens_for(Transaction, "after_insert")
     @event.listens_for(Transaction, "after_update")
     def prepare_data_for_transaction(mapper, connection, target):
@@ -141,3 +141,33 @@ def register_events():
                 new_session.rollback()  # Откатываем транзакцию, если произошла ошибка
             finally:
                 new_session.close()
+    reg_invoice_events()
+
+
+def reg_invoice_events():
+    from app.invoice.models import Invoice
+    from app.product.models import ContainerLot, PartLot, ProductLot
+
+    # Обработчик событий на изменение инвойсов
+    @event.listens_for(Invoice, "after_insert")
+    @event.listens_for(Invoice, "after_update")
+    def update_invoice_fields_self(mapper, connection, target):
+        if target:
+            target.update_fields()
+
+    # Обработчик событий на изменение лотов
+    @event.listens_for(ProductLot, "after_insert")
+    @event.listens_for(ProductLot, "after_update")
+    @event.listens_for(ProductLot, "after_delete")
+    @event.listens_for(ContainerLot, "after_insert")
+    @event.listens_for(ContainerLot, "after_update")
+    @event.listens_for(ContainerLot, "after_delete")
+    @event.listens_for(PartLot, "after_insert")
+    @event.listens_for(PartLot, "after_update")
+    @event.listens_for(PartLot, "after_delete")
+    def update_invoice_fields(mapper, connection, target):
+        # target — это объект лота (ProductLot, ContainerLot, или PartLot)
+        # Получаем связанный invoice и обновляем количество
+        invoice = target.invoice
+        if invoice:
+            invoice.update_fields()
