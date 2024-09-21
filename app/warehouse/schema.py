@@ -190,6 +190,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .filter(
                 PartLot.quantity != 0,
                 Invoice.status == InvoiceStatuses.PUBLISHED,
+                PartLot.invoice_id == Invoice.id,
             )
             .group_by(Part.id, Part.name)
             .all()
