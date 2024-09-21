@@ -127,6 +127,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             .filter(
                 ProductLot.quantity != 0,
                 Invoice.status == InvoiceStatuses.PUBLISHED,
+                ProductLot.invoice_id == Invoice.id,
             )
             .group_by(Product.id, Product.name)
             .all()
@@ -159,6 +160,7 @@ class WarehouseDetailSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
                 Invoice.warehouse_receiver_id == obj.id,
                 Invoice.status == InvoiceStatuses.PUBLISHED,
                 ContainerLot.quantity != 0,
+                ContainerLot.invoice_id == Invoice.id,
             )
             .group_by(Container.id, Container.name)
             .all()

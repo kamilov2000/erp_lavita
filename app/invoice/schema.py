@@ -304,7 +304,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
                         Container.decrease(
                             container_id=obj["container_id"],
                             decrease_quantity=obj["quantity"],
-                            warehouse_id=obj["warehouse_sender_id"],
+                            warehouse_id=data["warehouse_sender_id"],
                             transfer=False,
                         )
                     )
@@ -317,7 +317,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
                         Part.decrease(
                             part_id=obj["part_id"],
                             decrease_quantity=obj["quantity"],
-                            warehouse_id=obj["warehouse_sender_id"],
+                            warehouse_id=data["warehouse_sender_id"],
                             transfer=False,
                         )
                     )
@@ -396,7 +396,7 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
                         Container.decrease(
                             container_id=obj["container_id"],
                             decrease_quantity=obj["quantity"],
-                            warehouse_id=obj["warehouse_sender_id"],
+                            warehouse_id=data["warehouse_sender_id"],
                             transfer=True,
                         )
                     )
@@ -409,7 +409,7 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
                         Part.decrease(
                             part_id=obj["part_id"],
                             decrease_quantity=obj["quantity"],
-                            warehouse_id=obj["warehouse_sender_id"],
+                            warehouse_id=data["warehouse_sender_id"],
                             transfer=True,
                         )
                     )
