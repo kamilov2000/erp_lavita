@@ -42,6 +42,7 @@ class LotBase:
                 total_cost += remaining_quantity * lot.price
                 if expense:
                     lot.quantity -= remaining_quantity
+                    lot.invoice.quantity = lot.invoice.available_quantity()
                 remaining_quantity = 0
                 break
             else:
@@ -49,6 +50,7 @@ class LotBase:
                 remaining_quantity -= lot.quantity
                 if expense:
                     lot.quantity = 0
+                    lot.invoice.quantity = lot.invoice.available_quantity()
         if remaining_quantity > 0 and expense:
             model_name = str(LotModel.__tablename__).split("_")[0]
             debt = Debt(
@@ -102,7 +104,7 @@ class Container(Base):
                 ContainerLot.container_id == container_id,
                 Invoice.status == InvoiceStatuses.PUBLISHED,
                 Invoice.type != InvoiceTypes.EXPENSE,
-                Invoice.warehouse_sender_id == warehouse_id
+                Invoice.warehouse_receiver_id == warehouse_id,
             )
             .order_by(ContainerLot.created_at.asc())
             .all()
@@ -173,7 +175,8 @@ class Part(Base):
         lots = (
             PartLot.query.join(Invoice, PartLot.invoice_id == Invoice.id)
             .where(
-                PartLot.part_id == part_id, Invoice.warehouse_sender_id == warehouse_id
+                PartLot.part_id == part_id,
+                Invoice.warehouse_receiver_id == warehouse_id,
             )
             .order_by(PartLot.created_at.asc())
             .all()
@@ -183,6 +186,7 @@ class Part(Base):
             if lot.quantity >= decrease_quantity:
                 lot.calc_total_sum()
                 lot.quantity -= decrease_quantity
+                lot.invoice.quantity = lot.invoice.available_quantity()
                 new_lot = PartLot(
                     quantity=decrease_quantity,
                     price=lot.price,
@@ -201,6 +205,7 @@ class Part(Base):
                 res_lots.append(new_lot)
                 lot.quantity = 0
                 lot.calc_total_sum()
+                lot.invoice.quantity = lot.invoice.available_quantity()
         if decrease_quantity > 0 and not transfer:
             debt = Debt(
                 quantity=decrease_quantity,

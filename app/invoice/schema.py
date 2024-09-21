@@ -254,6 +254,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
                         old_lot = unit.product_lot
                         old_lot.quantity -= 1
                         old_lot.calc_total_sum()
+                        old_lot.invoice.quantity = old_lot.invoice.available_quantity()
                         if not expended_products.get(old_lot.product_id):
                             expended_products[old_lot.product_id] = {}
                             expended_products[old_lot.product_id]["quantity"] = 1
@@ -384,6 +385,7 @@ class TransferSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema
                     old_lot = unit.product_lot
                     old_lot.quantity -= 1
                     old_lot.calc_total_sum()
+                    old_lot.invoice.quantity = old_lot.invoice.available_quantity()
                     unit.product_lot = new_lot
             data["product_lots"] = new_lots
 
