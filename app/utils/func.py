@@ -112,7 +112,7 @@ def hash_image_save(
     # if allowed_extensions is not None and extension.lower() not in allowed_extensions:
     #     raise CustomError("Not allowed extension!")
     hashed_filename = (
-        f"{ident_str}{sha256(secured_filename.encode("utf-8")).hexdigest()}.{extension}"
+        f"{ident_str}{sha256(secured_filename.encode('utf-8')).hexdigest()}.{extension}"
     )
     file_path = os.path.join(model_upload_path, hashed_filename)
     uploaded_file.save(file_path)
@@ -165,7 +165,7 @@ def cancel_invoice(invoice_id):
         if invoice.type == InvoiceTypes.TRANSFER:
             invoice.warehouse_sender_id, invoice.warehouse_receiver_id = (
                 invoice.warehouse_receiver_id,
-                invoice.warehouse_sender_id
+                invoice.warehouse_sender_id,
             )
 
     # Изменение статуса инвойса на "отменён"
