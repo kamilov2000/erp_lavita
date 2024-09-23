@@ -1,5 +1,7 @@
+from decimal import Decimal
+
 from flask.views import MethodView
-from sqlalchemy import JSON, Enum, Float, ForeignKey, String
+from sqlalchemy import JSON, Enum, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
 from app.choices import CrudOperations
@@ -69,8 +71,8 @@ class BalanceMixin:
     """Добавление поля баланс к объекту"""
 
     @declared_attr
-    def balance(cls) -> Mapped[float]:
-        return mapped_column(Float, default=0, nullable=True)
+    def balance(cls) -> Mapped[Decimal]:
+        return mapped_column(Numeric(precision=12, scale=0), default=0, nullable=True)
 
 
 class TempDataMixin:

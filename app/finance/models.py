@@ -1,5 +1,6 @@
 import calendar
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 
 from sqlalchemy import (
@@ -10,6 +11,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Table,
 )
@@ -180,7 +182,9 @@ class Transaction(TempDataMixin, Base):
     debit_object_id = Column(Integer, nullable=False)
     credit_content_type = Column(String(50), nullable=False)
     credit_object_id = Column(Integer, nullable=False)
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(
+        Numeric(precision=12, scale=0), nullable=False
+    )
     category: Mapped[AccountCategories] = mapped_column(
         Enum(AccountCategories), default=AccountCategories.SYSTEM, nullable=False
     )
