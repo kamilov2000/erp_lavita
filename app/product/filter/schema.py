@@ -23,23 +23,11 @@ class MarkupSchema(SQLAlchemyAutoSchema):
         exclude = ["created_at", "updated_at"]
 
 
-class MarkupFilterDetailSchema(SQLAlchemyAutoSchema):
-    class Meta:
-        model = MarkupFilter
-        include_fk = True
-
-    id = auto_field(dump_ony=True)
-    updated_at = auto_field(dump_ony=True)
-    product_name = ma.fields.Method("get_product_name")
+class BaseMarkupFilterSchema:
     markups_quantity = ma.fields.Method("get_markups_quantity")
     used_markups_quantity = ma.fields.Method("get_used_markups_quantity")
     unused_markups_quantity = ma.fields.Method("get_unused_markups_quantity")
-    markups = ma.fields.Nested(MarkupSchema(many=True))
-
-    @staticmethod
-    def get_product_name(obj):
-        return obj.product.name
-
+    
     @staticmethod
     def get_markups_quantity(obj):
         return len(obj.markups)
@@ -61,6 +49,21 @@ class MarkupFilterDetailSchema(SQLAlchemyAutoSchema):
             .where(Markup.is_used.is_(False), MarkupFilter.id == obj.id)
             .scalar()
         )
+
+
+class MarkupFilterDetailSchema(SQLAlchemyAutoSchema, BaseMarkupFilterSchema):
+    class Meta:
+        model = MarkupFilter
+        include_fk = True
+
+    id = auto_field(dump_ony=True)
+    updated_at = auto_field(dump_ony=True)
+    product_name = ma.fields.Method("get_product_name")
+    markups = ma.fields.Nested(MarkupSchema(many=True))
+
+    @staticmethod
+    def get_product_name(obj):
+        return obj.product.name
 
 
 class MarkupFilterLoadSchema(SQLAlchemySchema):
@@ -90,7 +93,7 @@ class FileMarkupFilter(ma.Schema):
     file = ma.fields.Raw(type="string", format="binary")
 
 
-class MarkupFilterListSchema(SQLAlchemyAutoSchema):
+class MarkupFilterListSchema(SQLAlchemyAutoSchema, BaseMarkupFilterSchema):
     class Meta:
         model = MarkupFilter
 
