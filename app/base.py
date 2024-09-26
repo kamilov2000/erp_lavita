@@ -100,7 +100,7 @@ class Base(DeclarativeBase):
                 setattr(self, kw, datetime.strptime(value, "%Y-%m-%d %H:%M:%S"))
             elif isinstance(getattr(self, kw), date) and isinstance(value, str):
                 setattr(self, kw, datetime.strptime(value, "%Y-%m-%d").date())
-            elif isinstance(self, kw, enum.Enum):
+            elif isinstance(getattr(self, kw), enum.Enum):
                 setattr(self, kw, value)
             else:
                 setattr(self, kw, value)

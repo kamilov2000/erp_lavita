@@ -103,13 +103,13 @@ class Invoice(Base, InvoiceBase):
     files: Mapped[List["File"]] = relationship(back_populates="invoice")
     price: Mapped[Optional[float]] = mapped_column(Float(decimal_return_scale=2))
     quantity: Mapped[Optional[int]]
-    comments: Mapped[List["InvoiceComment"]] = relationship(back_populates="invoice")
-    logs: Mapped[List["InvoiceLog"]] = relationship(back_populates="invoice")
-    product_lots: Mapped[List["ProductLot"]] = relationship(back_populates="invoice")
+    comments: Mapped[List["InvoiceComment"]] = relationship(back_populates="invoice", cascade="all")
+    logs: Mapped[List["InvoiceLog"]] = relationship(back_populates="invoice", cascade="all")
+    product_lots: Mapped[List["ProductLot"]] = relationship(back_populates="invoice", cascade="all")
     container_lots: Mapped[List["ContainerLot"]] = relationship(
-        back_populates="invoice"
+        back_populates="invoice", cascade="all"
     )
-    part_lots: Mapped[List["PartLot"]] = relationship(back_populates="invoice")
+    part_lots: Mapped[List["PartLot"]] = relationship(back_populates="invoice", cascade="all")
     created_data: Mapped[Optional[dict[str, str]]] = mapped_column(
         MutableDict.as_mutable(JSONEncodedDict)
     )

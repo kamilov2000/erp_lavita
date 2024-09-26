@@ -123,6 +123,17 @@ class ContainerSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     parts_r = ma.fields.Nested(ContainerPartSchema, many=True)
 
 
+class ContainerUpdateSchema(SQLAlchemySchema):
+    class Meta:
+        model = Container
+        include_fk = True
+
+    measurement = ma.fields.Enum(MeasumentTypes, by_value=True)
+    parts_r = ma.fields.Nested(ContainerPartSchema, many=True)
+    name = auto_field(required=False)
+    description = auto_field(required=False)
+
+
 class PartSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     class Meta:
         model = Part

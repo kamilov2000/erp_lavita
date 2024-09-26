@@ -9,6 +9,7 @@ from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
 from app.product.models import Container, ContainerLot
 from app.product.schema import (
+    ContainerUpdateSchema,
     OneProductInvoiceStatsQuery,
     PagContainerSchema,
     PhotoSchema,
@@ -20,7 +21,7 @@ from app.product.schema import (
 from app.base import session
 from app.user.models import User
 from app.utils.exc import ItemNotFoundError
-from app.utils.func import hash_image_save, msg_response, token_required
+from app.utils.func import hash_image_save, msg_response, sql_exception_handler, token_required
 from app.utils.schema import ResponseSchema
 from app.warehouse.models import Warehouse
 
@@ -33,6 +34,7 @@ container = Blueprint(
 @container.route("/")
 class ContainerAllView(MethodView):
     @token_required
+    @sql_exception_handler
     @container.arguments(ProductQueryArgSchema, location="query")
     @container.response(200, PagContainerSchema)
     def get(c, self, args):
@@ -47,23 +49,18 @@ class ContainerAllView(MethodView):
             limit = 10
         if limit <= 0:
             limit = 10
-        try:
-            query = Container.query.filter_by(**args).order_by(
-                Container.created_at.desc()
+        query = Container.query.filter_by(**args).order_by(
+            Container.created_at.desc()
+        )
+        if warehouse_id:
+            query = (
+                query.join(ContainerLot, ContainerLot.container_id == Container.id)
+                .join(Invoice, Invoice.id == ContainerLot.invoice_id)
+                .where(Invoice.warehouse_receiver_id == warehouse_id)
             )
-            if warehouse_id:
-                query = (
-                    query.join(ContainerLot, ContainerLot.container_id == Container.id)
-                    .join(Invoice, Invoice.id == ContainerLot.invoice_id)
-                    .where(Invoice.warehouse_receiver_id == warehouse_id)
-                )
-            total_count = query.count()
-            total_pages = (total_count + limit - 1) // limit
-            data = query.limit(limit).offset((page - 1) * limit).all()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
         response = {
             "data": data,
             "pagination": {
@@ -77,24 +74,21 @@ class ContainerAllView(MethodView):
         return response
 
     @token_required
+    @sql_exception_handler
     @container.arguments(ContainerSchema)
     @container.response(400, ResponseSchema)
     @container.response(201, ContainerSchema)
     def post(c, self, new_data):
         """Add a new container"""
-        try:
-            session.add(new_data)
-            session.commit()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        session.add(new_data)
+        session.commit()
         return new_data
 
 
 @container.route("/<container_id>/")
 class ContainerById(MethodView):
     @token_required
+    @sql_exception_handler
     @container.response(200, ContainerSchema)
     def get(c, self, container_id):
         """Get container by ID"""
@@ -105,7 +99,8 @@ class ContainerById(MethodView):
         return item
 
     @token_required
-    @container.arguments(ContainerSchema)
+    @sql_exception_handler
+    @container.arguments(ContainerUpdateSchema)
     @container.response(200, ContainerSchema)
     def put(c, self, update_data, container_id):
         """Update existing container"""
@@ -113,12 +108,12 @@ class ContainerById(MethodView):
             item = Container.get_by_id(container_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        update_data.id = container_id
-        session.merge(update_data)
+        item.update(**update_data)
         session.commit()
         return item
 
     @token_required
+    @sql_exception_handler
     @container.response(204)
     def delete(c, self, container_id):
         """Delete container"""
@@ -130,6 +125,7 @@ class ContainerById(MethodView):
 
 @container.post("/<container_id>/update_photo/")
 @token_required
+@sql_exception_handler
 @container.arguments(PhotoSchema, location="files")
 @container.response(400, ResponseSchema)
 @container.response(200, ContainerSchema)
@@ -151,6 +147,7 @@ def change_photo(cur_user, photo, container_id):
 
 @container.get("/<container_id>/warehouse-stats/")
 @token_required
+@sql_exception_handler
 @container.response(200, StandaloneProductWarehouseStats)
 def standalone_container_warehouse_stats(c, container_id):
     Container.get_by_id(container_id)
@@ -196,6 +193,7 @@ def standalone_container_warehouse_stats(c, container_id):
 
 @container.get("/<container_id>/invoice-stats/")
 @token_required
+@sql_exception_handler
 @container.arguments(OneProductInvoiceStatsQuery, location="query")
 @container.response(200, StandaloneProductInvoiceStats(many=True))
 def standalone_container_invoice_stats(c, args, container_id):
