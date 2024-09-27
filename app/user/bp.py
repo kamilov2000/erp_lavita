@@ -98,6 +98,7 @@ def login_user(data):
 
 
 @user.post("/register")
+@sql_exception_handler
 @user.arguments(LoginSchema)
 @user.response(200, LoginResponseSchema)
 @user.response(400, ResponseSchema)
@@ -108,17 +109,12 @@ def register(data):
         return msg_response("Username is already in use", False), 400
     user = User(**data)
     user.set_password(data.get("password"))
-    try:
-        session.add(user)
-        session.flush()
-        schema = UserCreateSchema()
-        user.add_temp_data("history_data", schema.dump(user))
-        user.create_salary_abd_permission_obj()
-        session.commit()
-    except SQLAlchemyError as e:
-        current_app.logger.error(str(e.args))
-        session.rollback()
-        return msg_response("Something went wrong", False), 400
+    session.add(user)
+    session.flush()
+    schema = UserCreateSchema()
+    user.add_temp_data("history_data", schema.dump(user))
+    user.create_salary_abd_permission_obj()
+    session.commit()
     token = jwt.encode(
         {
             "public_id": user.id,

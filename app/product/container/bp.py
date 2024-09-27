@@ -7,7 +7,7 @@ from flask_smorest import Blueprint, abort
 
 from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
-from app.product.models import Container, ContainerLot
+from app.product.models import Container, ContainerLot, ContainerPart
 from app.product.schema import (
     ContainerUpdateSchema,
     OneProductInvoiceStatsQuery,
@@ -21,7 +21,12 @@ from app.product.schema import (
 from app.base import session
 from app.user.models import User
 from app.utils.exc import ItemNotFoundError
-from app.utils.func import hash_image_save, msg_response, sql_exception_handler, token_required
+from app.utils.func import (
+    hash_image_save,
+    msg_response,
+    sql_exception_handler,
+    token_required,
+)
 from app.utils.schema import ResponseSchema
 from app.warehouse.models import Warehouse
 
@@ -49,9 +54,7 @@ class ContainerAllView(MethodView):
             limit = 10
         if limit <= 0:
             limit = 10
-        query = Container.query.filter_by(**args).order_by(
-            Container.created_at.desc()
-        )
+        query = Container.query.filter_by(**args).order_by(Container.created_at.desc())
         if warehouse_id:
             query = (
                 query.join(ContainerLot, ContainerLot.container_id == Container.id)
@@ -108,7 +111,14 @@ class ContainerById(MethodView):
             item = Container.get_by_id(container_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        item.update(**update_data)
+        parts_r = update_data.pop("parts_r", [])
+        if parts_r:
+            for pr in item.parts_r:
+                session.delete(pr)
+            for part in parts_r:
+                session.add(ContainerPart(container_id=container_id, **part))
+        ContainerUpdateSchema().load(update_data, instance=item, partial=True)
+        current_app.logger.error(item.__dict__)
         session.commit()
         return item
 

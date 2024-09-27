@@ -20,7 +20,7 @@ from app.product.schema import (
 from app.base import session
 from app.user.models import User
 from app.utils.exc import ItemNotFoundError
-from app.utils.func import hash_image_save, msg_response, token_required
+from app.utils.func import hash_image_save, msg_response, sql_exception_handler, token_required
 from app.utils.schema import ResponseSchema
 from app.warehouse.models import Warehouse
 
@@ -33,6 +33,7 @@ part = Blueprint(
 @part.route("/")
 class PartAllView(MethodView):
     @token_required
+    @sql_exception_handler
     @part.arguments(ProductQueryArgSchema, location="query")
     @part.response(200, PagPartSchema)
     def get(c, self, args):
@@ -47,21 +48,16 @@ class PartAllView(MethodView):
             limit = 10
         if limit <= 0:
             limit = 10
-        try:
-            query = Part.query.filter_by(**args).order_by(Part.created_at.desc())
-            if warehouse_id:
-                query = (
-                    query.join(PartLot, PartLot.part_id == Part.id)
-                    .join(Invoice, Invoice.id == PartLot.invoice_id)
-                    .where(Invoice.warehouse_receiver_id == warehouse_id)
-                )
-            total_count = query.count()
-            total_pages = (total_count + limit - 1) // limit
-            data = query.limit(limit).offset((page - 1) * limit).all()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        query = Part.query.filter_by(**args).order_by(Part.created_at.desc())
+        if warehouse_id:
+            query = (
+                query.join(PartLot, PartLot.part_id == Part.id)
+                .join(Invoice, Invoice.id == PartLot.invoice_id)
+                .where(Invoice.warehouse_receiver_id == warehouse_id)
+            )
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
         response = {
             "data": data,
             "pagination": {
@@ -75,24 +71,21 @@ class PartAllView(MethodView):
         return response
 
     @token_required
+    @sql_exception_handler
     @part.arguments(PartSchema)
     @part.response(400, ResponseSchema)
     @part.response(201, PartSchema)
     def post(c, self, new_data):
         """Add a new part"""
-        try:
-            session.add(new_data)
-            session.commit()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        session.add(new_data)
+        session.commit()
         return new_data
 
 
 @part.route("/<part_id>/")
 class PartById(MethodView):
     @token_required
+    @sql_exception_handler
     @part.response(200, PartSchema)
     def get(c, self, part_id):
         """Get part by ID"""
@@ -103,6 +96,7 @@ class PartById(MethodView):
         return item
 
     @token_required
+    @sql_exception_handler
     @part.arguments(PartSchema)
     @part.response(200, PartSchema)
     def put(c, self, update_data, part_id):
@@ -117,6 +111,7 @@ class PartById(MethodView):
         return item
 
     @token_required
+    @sql_exception_handler
     @part.response(204)
     def delete(c, self, part_id):
         """Delete part"""
@@ -128,6 +123,7 @@ class PartById(MethodView):
 
 @part.post("/<part_id>/update_photo/")
 @token_required
+@sql_exception_handler
 @part.arguments(PhotoSchema, location="files")
 @part.response(400, ResponseSchema)
 @part.response(200, PartSchema)
@@ -149,6 +145,7 @@ def change_photo(cur_user, photo, part_id):
 
 @part.get("/<part_id>/warehouse-stats/")
 @token_required
+@sql_exception_handler
 @part.response(200, StandaloneProductWarehouseStats)
 def standalone_part_warehouse_stats(c, part_id):
     Part.get_by_id(part_id)
@@ -194,6 +191,7 @@ def standalone_part_warehouse_stats(c, part_id):
 
 @part.get("/<part_id>/invoice-stats/")
 @token_required
+@sql_exception_handler
 @part.arguments(OneProductInvoiceStatsQuery, location="query")
 @part.response(200, StandaloneProductInvoiceStats(many=True))
 def standalone_part_invoice_stats(c, args, part_id):

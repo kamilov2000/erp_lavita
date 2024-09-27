@@ -19,7 +19,7 @@ from app.product.filter.schema import (
     PagMarkupFilterSchema,
 )
 from app.product.models import Markup, MarkupFilter, ProductLot, ProductUnit
-from app.utils.func import msg_response, token_required
+from app.utils.func import msg_response, sql_exception_handler, token_required
 from app.utils.exc import ItemNotFoundError
 from app.utils.schema import ResponseSchema
 
@@ -31,6 +31,7 @@ filter = Blueprint(
 @filter.route("/")
 class MarkupFilterAllView(MethodView):
     @token_required
+    @sql_exception_handler
     @filter.arguments(FilterQueryArgSchema, location="query")
     @filter.response(200, PagMarkupFilterSchema)
     def get(c, self, args):
@@ -44,17 +45,12 @@ class MarkupFilterAllView(MethodView):
             limit = 10
         if limit <= 0:
             limit = 10
-        try:
-            query = MarkupFilter.query.filter_by(**args).order_by(
-                MarkupFilter.created_at.desc()
-            )
-            total_count = query.count()
-            total_pages = (total_count + limit - 1) // limit
-            data = query.limit(limit).offset((page - 1) * limit).all()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        query = MarkupFilter.query.filter_by(**args).order_by(
+            MarkupFilter.created_at.desc()
+        )
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
         response = {
             "data": data,
             "pagination": {
@@ -68,24 +64,21 @@ class MarkupFilterAllView(MethodView):
         return response
 
     @token_required
+    @sql_exception_handler
     @filter.arguments(MarkupFilterLoadSchema)
     @filter.response(400, ResponseSchema)
     @filter.response(201, MarkupFilterDetailSchema)
     def post(c, self, new_data):
         """Add a new filter"""
-        try:
-            session.add(new_data)
-            session.commit()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        session.add(new_data)
+        session.commit()
         return new_data
 
 
 @filter.route("/<filter_id>/")
 class MarkupFilterById(MethodView):
     @token_required
+    @sql_exception_handler
     @filter.response(200, MarkupFilterDetailSchema)
     def get(c, self, filter_id):
         """Get filter by ID"""
@@ -96,6 +89,7 @@ class MarkupFilterById(MethodView):
         return item
 
     @token_required
+    @sql_exception_handler
     @filter.arguments(MarkupFilterUpdateSchema)
     @filter.response(200, MarkupFilterDetailSchema)
     def put(c, self, update_data, filter_id):
@@ -110,6 +104,7 @@ class MarkupFilterById(MethodView):
         return item
 
     @token_required
+    @sql_exception_handler
     @filter.response(204)
     def delete(c, self, filter_id):
         """Delete filter"""
@@ -121,6 +116,7 @@ class MarkupFilterById(MethodView):
 
 @filter.post("/<filter_id>/add-markups/")
 @token_required
+@sql_exception_handler
 @filter.arguments(FileMarkupFilter, location="files")
 @filter.response(400, ResponseSchema)
 @filter.response(200, MarkupFilterDetailSchema)
@@ -198,6 +194,7 @@ def add_markups_from_excel(c, data, filter_id):
 
 @filter.get("/<filter_id>/unused-markups/")
 @token_required
+@sql_exception_handler
 @filter.response(400, ResponseSchema)
 @filter.response(200, MarkupSchema(many=True))
 def detail_unused(c, filter_id):

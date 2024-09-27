@@ -8,7 +8,7 @@ from flask_smorest import Blueprint, abort
 from app.choices import InvoiceStatuses, InvoiceTypes
 from app.invoice.models import Invoice
 from app.invoice.schema import ProductUnitSchema
-from app.product.models import Container, Part, Product, ProductLot, ProductUnit
+from app.product.models import Container, ContainerPart, Part, Product, ProductLot, ProductPart, ProductUnit
 from app.product.schema import (
     AllProductsStats,
     MarkupsArray,
@@ -23,7 +23,7 @@ from app.product.schema import (
 from app.base import session
 from app.user.models import User
 from app.utils.exc import ItemNotFoundError
-from app.utils.func import hash_image_save, msg_response, token_required
+from app.utils.func import hash_image_save, msg_response, sql_exception_handler, token_required
 from app.utils.schema import ResponseSchema
 from app.warehouse.models import Warehouse
 
@@ -36,6 +36,7 @@ product = Blueprint(
 @product.route("/")
 class ProductAllView(MethodView):
     @token_required
+    @sql_exception_handler
     @product.arguments(ProductQueryArgSchema, location="query")
     @product.response(200, PagProductSchema)
     def get(c, self, args):
@@ -50,21 +51,16 @@ class ProductAllView(MethodView):
             limit = 10
         if limit <= 0:
             limit = 10
-        try:
-            query = Product.query.filter_by(**args).order_by(Product.created_at.desc())
-            if warehouse_id:
-                query = (
-                    query.join(ProductLot, ProductLot.product_id == Product.id)
-                    .join(Invoice, Invoice.id == ProductLot.invoice_id)
-                    .where(Invoice.warehouse_receiver_id == warehouse_id)
-                )
-            total_count = query.count()
-            total_pages = (total_count + limit - 1) // limit
-            data = query.limit(limit).offset((page - 1) * limit).all()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        query = Product.query.filter_by(**args).order_by(Product.created_at.desc())
+        if warehouse_id:
+            query = (
+                query.join(ProductLot, ProductLot.product_id == Product.id)
+                .join(Invoice, Invoice.id == ProductLot.invoice_id)
+                .where(Invoice.warehouse_receiver_id == warehouse_id)
+            )
+        total_count = query.count()
+        total_pages = (total_count + limit - 1) // limit
+        data = query.limit(limit).offset((page - 1) * limit).all()
         response = {
             "data": data,
             "pagination": {
@@ -78,24 +74,21 @@ class ProductAllView(MethodView):
         return response
 
     @token_required
+    @sql_exception_handler
     @product.arguments(ProductSchema)
     @product.response(400, ResponseSchema)
     @product.response(201, ProductSchema)
     def post(c, self, new_data):
         """Add a new product"""
-        try:
-            session.add(new_data)
-            session.commit()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        session.add(new_data)
+        session.commit()
         return new_data
 
 
 @product.route("/<product_id>/")
 class ProductById(MethodView):
     @token_required
+    @sql_exception_handler
     @product.response(200, ProductSchema)
     def get(c, self, product_id):
         """Get product by ID"""
@@ -106,6 +99,7 @@ class ProductById(MethodView):
         return item
 
     @token_required
+    @sql_exception_handler
     @product.arguments(ProductSchema)
     @product.response(200, ProductSchema)
     def put(c, self, update_data, product_id):
@@ -114,17 +108,17 @@ class ProductById(MethodView):
             item = Product.get_by_id(product_id)
         except ItemNotFoundError:
             abort(404, message="Item not found.")
-        try:
-            update_data.id = product_id
-            session.merge(update_data)
-            session.commit()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        for pr in item.parts_r:
+            session.delete(pr)
+        for pr in item.containers_r:
+            session.delete(pr)
+        update_data.id = product_id
+        session.merge(update_data)
+        session.commit()
         return item
 
     @token_required
+    @sql_exception_handler
     @product.response(204)
     def delete(c, self, product_id):
         """Delete product"""
@@ -136,6 +130,7 @@ class ProductById(MethodView):
 
 @product.post("/<product_id>/update_photo/")
 @token_required
+@sql_exception_handler
 @product.arguments(PhotoSchema, location="files")
 @product.response(400, ResponseSchema)
 @product.response(200, ProductSchema)
@@ -157,6 +152,7 @@ def change_photo(cur_user, photo, product_id):
 
 @product.get("/<product_id>/markups/from_warehouse/<warehouse_id>/")
 @token_required
+@sql_exception_handler
 @product.response(400, ResponseSchema)
 @product.response(200, ProductUnitSchema(many=True))
 def get_product_units(cur_user, product_id, warehouse_id):
@@ -187,6 +183,7 @@ def get_product_units(cur_user, product_id, warehouse_id):
 
 @product.get("/stats/")
 @token_required
+@sql_exception_handler
 @product.response(200, AllProductsStats)
 def all_product_stats(cur_user):
     return {
@@ -198,6 +195,7 @@ def all_product_stats(cur_user):
 
 @product.post("/check_markups/")
 @token_required
+@sql_exception_handler
 @product.arguments(MarkupsArray)
 @product.response(200, ResponseSchema)
 def check_markup(c, data):
@@ -216,6 +214,7 @@ def check_markup(c, data):
 
 @product.get("/<product_id>/warehouse-stats/")
 @token_required
+@sql_exception_handler
 @product.response(200, StandaloneProductWarehouseStats)
 def standalone_product_warehouse_stats(c, product_id):
     Product.get_by_id(product_id)
@@ -261,6 +260,7 @@ def standalone_product_warehouse_stats(c, product_id):
 
 @product.get("/<product_id>/invoice-stats/")
 @token_required
+@sql_exception_handler
 @product.arguments(OneProductInvoiceStatsQuery, location="query")
 @product.response(200, StandaloneProductInvoiceStats(many=True))
 def standalone_product_invoice_stats(c, args, product_id):

@@ -13,7 +13,7 @@ from app.invoice.schema import (
     TransferSchema,
 )
 from app.utils.exc import ItemNotFoundError
-from app.utils.func import cancel_invoice, hash_image_save, msg_response, token_required
+from app.utils.func import cancel_invoice, hash_image_save, msg_response, sql_exception_handler, token_required
 from app.utils.schema import ResponseSchema
 from app.base import session
 from .bp import invoice as invoice_bp
@@ -61,19 +61,15 @@ def register_update_photos_route(bp, route, response_schema):
 def register_add_comment_route(bp, route):
     @bp.post(route)
     @token_required
+    @sql_exception_handler
     @bp.arguments(InvoiceCommentSchema)
     @bp.response(400, ResponseSchema)
     @bp.response(200, InvoiceCommentSchema)
     def add_comment(cur_user, data, invoice_id):
-        try:
-            data.user_id = cur_user.id
-            data.invoice_id = invoice_id
-            session.add(data)
-            session.commit()
-        except SQLAlchemyError as e:
-            current_app.logger.error(str(e.args))
-            session.rollback()
-            return msg_response("Something went wrong", False), 400
+        data.user_id = cur_user.id
+        data.invoice_id = invoice_id
+        session.add(data)
+        session.commit()
         return data
 
 

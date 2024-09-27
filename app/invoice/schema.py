@@ -249,7 +249,7 @@ class ExpenseSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema, BaseInvoiceSchema)
             if product_unit_markups:
                 expended_products = {}
                 for obj in product_unit_markups:
-                    unit: ProductUnit | None = ProductUnit.query.get(obj["markup"])
+                    unit: ProductUnit | None = ProductUnit.query.get(obj.get("markup"))
                     if unit:
                         old_lot = unit.product_lot
                         old_lot.quantity -= 1
