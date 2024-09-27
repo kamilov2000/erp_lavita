@@ -97,7 +97,7 @@ class Container(Base):
     @staticmethod
     def decrease(container_id, decrease_quantity, warehouse_id, transfer=False):
         if decrease_quantity <= 0:
-            return
+            return []
         lots = (
             ContainerLot.query.join(Invoice, Invoice.id == ContainerLot.invoice_id)
             .where(
@@ -171,7 +171,7 @@ class Part(Base):
     @staticmethod
     def decrease(part_id, decrease_quantity, warehouse_id, transfer=False):
         if decrease_quantity <= 0:
-            return
+            return []
         lots = (
             PartLot.query.join(Invoice, PartLot.invoice_id == Invoice.id)
             .where(
