@@ -133,15 +133,11 @@ class PagCashRegisterSchema(ma.Schema):
 
 
 class TransactionSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
-    number_transaction = ma.fields.Method("get_number_transaction")
     status = ma.fields.Enum(enum=TransactionStatuses)
 
     class Meta:
         model = Transaction
         fields = ["id", "number_transaction", "amount", "created_at", "status"]
-
-    def get_number_transaction(self, obj):
-        return f"№{obj.id}"
 
 
 class CashRegisterHistorySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -302,6 +298,7 @@ class TransactionCreateUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         model = Transaction
         fields = [
             "id",
+            "number_transaction",
             "credit_category",
             "debit_category",
             "credit_object_id",
@@ -314,7 +311,6 @@ class TransactionCreateUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class TransactionListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     credit_category = ma.fields.Method("get_credit_category")
     debit_category = ma.fields.Method("get_debit_category")
-    number_transaction = ma.fields.Method("get_number_transaction")
     status = ma.fields.Enum(enum=TransactionStatuses)
     created_at = ma.fields.DateTime(format="%d %b %Y, %H:%M")
 
@@ -332,9 +328,6 @@ class TransactionListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "can_edit",
             "can_cancel",
         ]
-
-    def get_number_transaction(self, obj):
-        return f"№{obj.id}"
 
 
 class PagTransactionSchema(ma.Schema):
@@ -357,7 +350,6 @@ class TransactionCommentSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class TransactionRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     credit_category = ma.fields.Method("get_credit_category")
     debit_category = ma.fields.Method("get_debit_category")
-    number_transaction = ma.fields.Method("get_number_transaction")
     status = ma.fields.Enum(enum=TransactionStatuses)
     histories = ma.fields.Method("get_sorted_histories")
     comments = ma.fields.Nested(TransactionCommentSchema, many=True)
@@ -387,9 +379,6 @@ class TransactionRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             obj.histories, key=lambda x: x.created_at, reverse=True
         )
         return TransactionHistorySchema(many=True).dump(sorted_histories)
-
-    def get_number_transaction(self, obj):
-        return f"№{obj.id}"
 
     def get_credit_category(self, obj):
         if obj.credit_content_type == "Salary":
