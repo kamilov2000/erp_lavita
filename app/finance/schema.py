@@ -360,6 +360,8 @@ class TransactionRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "id",
             "credit_name",
             "debit_name",
+            "credit_object_id",
+            "debit_object_id",
             "amount",
             "created_at",
             "number_transaction",
@@ -382,13 +384,13 @@ class TransactionRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     def get_credit_category(self, obj):
         if obj.credit_content_type == "Salary":
-            return CATEGORY_COLLECTION["User"]
-        return CATEGORY_COLLECTION[obj.credit_content_type]
+            return "User"
+        return obj.credit_content_type
 
     def get_debit_category(self, obj):
         if obj.debit_content_type == "Salary":
-            return CATEGORY_COLLECTION["User"]
-        return CATEGORY_COLLECTION[obj.debit_content_type]
+            return "User"
+        return obj.debit_content_type
 
 
 class FileField(ma.fields.Field):
