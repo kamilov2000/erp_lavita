@@ -1,5 +1,4 @@
 import marshmallow as ma
-from marshmallow import validate
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, SQLAlchemySchema, auto_field
 
 from app.base import session

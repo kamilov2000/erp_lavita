@@ -44,6 +44,7 @@ from app.finance.schema import (
     TaxRateRetrieveSchema,
     TaxRateUpdateSchema,
     TransactionArgsSchema,
+    TransactionCommentCreateSchema,
     TransactionCommentSchema,
     TransactionCreateUpdateSchema,
     TransactionRetrieveSchema,
@@ -453,8 +454,8 @@ class TransactionByIdView(MethodView):
 
 
 @finance.post("/create_comment/<int:transaction_id>")
-@finance.arguments(TransactionCommentSchema)
-@finance.response(201, TransactionCommentSchema)
+@finance.arguments(TransactionCommentCreateSchema)
+@finance.response(201, TransactionCommentCreateSchema)
 @sql_exception_handler
 @token_required
 def create_comment(
@@ -472,7 +473,8 @@ def create_comment(
 
     session.add(item)
     session.commit()
-    schema = TransactionCommentSchema()
+    schema = TransactionCommentCreateSchema()
+
     return schema.dump(item)
 
 

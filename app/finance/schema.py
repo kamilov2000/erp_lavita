@@ -335,6 +335,12 @@ class PagTransactionSchema(ma.Schema):
     pagination = ma.fields.Nested(PaginationSchema)
 
 
+class TransactionCommentCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    class Meta:
+        model = TransactionComment
+        fields = ["comment", "id"]
+
+
 class TransactionCommentSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     created_at = ma.fields.DateTime(format="%d %b %Y, %H:%M", dump_only=True)
     user_name = ma.fields.Method("get_user_name")
