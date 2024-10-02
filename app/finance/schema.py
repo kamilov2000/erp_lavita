@@ -214,7 +214,7 @@ class CashRegisterUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class BalanceAccountCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     name = ma.fields.Str(required=True)
     code = ma.fields.Str(
-        required=True, validate=[validate.Length(4), check_all_strs_is_nums]
+        required=True, validate=[validate.Length(max=4), check_all_strs_is_nums]
     )
     account_type = ma.fields.Enum(required=True, enum=AccountTypes)
 
