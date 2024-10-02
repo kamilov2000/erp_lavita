@@ -37,6 +37,7 @@ class ByNameSearchSchema(ma.Schema):
 class ByNameAndCategorySearchSchema(ma.Schema):
     name = ma.fields.String(required=False, description="Search by name")
     category = ma.fields.Enum(enum=AccountCategories, description="Filter by Category")
+    type = ma.fields.Enum(enum=AccountTypes, description="Filter by Type")
     page = ma.fields.Int()
     limit = ma.fields.Int()
 
@@ -241,7 +242,7 @@ class BalanceAccountListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 class PagBalanceAccountSchema(ma.Schema):
     data = ma.fields.Nested(BalanceAccountListSchema(many=True))
-    pagination = ma.fields.Nested(BalanceAccountListSchema)
+    pagination = ma.fields.Nested(PaginationSchema)
 
 
 class BalanceAccountRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
@@ -359,11 +360,13 @@ class TransactionRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     status = ma.fields.Enum(enum=TransactionStatuses)
     histories = ma.fields.Method("get_sorted_histories")
     comments = ma.fields.Nested(TransactionCommentSchema, many=True)
+    category = ma.fields.Enum(AccountCategories)
 
     class Meta:
         model = Transaction
         fields = [
             "id",
+            "category",
             "credit_name",
             "debit_name",
             "credit_object_id",

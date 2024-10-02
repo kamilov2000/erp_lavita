@@ -217,9 +217,12 @@ class BalanceAccountView(CustomMethodPaginationView):
     def get(c, self, args):
         """get list balance_account"""
         category = args.pop("category", None)
+        _type = args.pop("type", None)
         lst = []
         if category:
             lst.append(self.model.category == category)
+        if _type:
+            lst.append(self.model.account_type == _type)
         return super(BalanceAccountView, self).get(args, query_args=lst)
 
     @token_required
