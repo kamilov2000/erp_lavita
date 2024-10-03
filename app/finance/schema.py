@@ -67,6 +67,7 @@ class TaxRateArgsSchema(ma.Schema):
     page = ma.fields.Int()
     limit = ma.fields.Int()
     category = ma.fields.Enum(enum=TaxRateCategories)
+    status = ma.fields.Enum(enum=Statuses)
     payment_type_name = ma.fields.Str(required=False)
 
 

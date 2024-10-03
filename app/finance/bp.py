@@ -665,6 +665,7 @@ class TaxRateView(CustomMethodPaginationView):
     def get(c, self, args):
         """get list tax_rate"""
         category = args.pop("category", None)
+        status = args.pop("status", None)
         payment_type_name = args.pop("payment_type_name", None)
         lst = []
         custom_query = None
@@ -678,6 +679,8 @@ class TaxRateView(CustomMethodPaginationView):
                 .filter(PaymentType.name == payment_type_name)
                 .order_by(TaxRate.created_at.desc())
             )
+        if status:
+            lst.append(self.model.status == status)
 
         return super(TaxRateView, self).get(
             args, query_args=lst, custom_query=custom_query
