@@ -448,6 +448,7 @@ class CounterpartySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class CounterpartyListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     status = ma.fields.Enum(enum=Statuses)
     category = ma.fields.Enum(enum=AccountCategories)
+    auto_charge = ma.fields.Method("get_charge_amount")
     created_at = ma.fields.DateTime(format="%d %b %Y, %H:%M")
 
     class Meta:
@@ -463,6 +464,9 @@ class CounterpartyListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "created_at",
             "can_delete_and_edit",
         ]
+
+    def get_charge_amount(self, obj):
+        return obj.charge_amount / obj.charge_period_months
 
 
 class PagCounterpartySchema(ma.Schema):
