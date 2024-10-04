@@ -45,7 +45,6 @@ from app.finance.schema import (
     TaxRateUpdateSchema,
     TransactionArgsSchema,
     TransactionCommentCreateSchema,
-    TransactionCommentSchema,
     TransactionCreateUpdateSchema,
     TransactionRetrieveSchema,
 )
@@ -493,17 +492,20 @@ class CounterpartyView(CustomMethodPaginationView):
         """get list counterparty"""
         created_date = args.pop("created_date", None)
         category = args.pop("category", None)
+        status = args.pop("status", None)
         lst = []
 
         if created_date:
             lst.append(func.date(self.model.created_at) == created_date)
         if category:
             lst.append(self.model.category == category)
+        if status:
+            lst.append(self.model.status == status)
 
         return super(CounterpartyView, self).get(args, query_args=lst)
 
     @token_required
-    @sql_exception_handler
+    # @sql_exception_handler
     @finance.arguments(CounterpartySchema)
     @finance.response(400, ResponseSchema)
     @finance.response(201, CounterpartySchema)
@@ -511,10 +513,9 @@ class CounterpartyView(CustomMethodPaginationView):
         """Add a new counterparty"""
         counterparty = Counterparty(**new_data, category=AccountCategories.USER)
         session.add(counterparty)
-        schema = CounterpartySchema()
-        counterparty.add_temp_data("history_data", schema.dump(counterparty))
+        counterparty.add_temp_data("history_data", counterparty)
         session.commit()
-        return schema.dump(counterparty)
+        return counterparty
 
 
 @finance.route("/counterparty/<int:id>")

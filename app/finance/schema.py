@@ -60,6 +60,7 @@ class CounterpartyArgsSchema(ma.Schema):
     limit = ma.fields.Int()
     created_date = ma.fields.Date()
     category = ma.fields.Enum(enum=AccountCategories)
+    status = ma.fields.Enum(enum=Statuses)
 
 
 class TaxRateArgsSchema(ma.Schema):
@@ -457,7 +458,7 @@ class CounterpartyListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "status",
             "balance",
             "id",
-            "auto_charge",
+            "charge_amount",
             "category",
             "created_at",
             "can_delete_and_edit",
