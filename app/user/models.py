@@ -151,7 +151,12 @@ class Partner(Base):
     )  # Время окончания работы партнера
 
     def __repr__(self):
-        return f"<Partner(user={self.user.full_name}, for_half_day={self.for_half_day}, start_time={self.start_time}, end_time={self.end_time})>"
+        return f"""
+            <Partner(user={self.user.full_name},
+            for_half_day={self.for_half_day},
+            start_time={self.start_time},
+            end_time={self.end_time})>
+        """
 
 
 class SalaryCalculation(Base):
@@ -258,10 +263,10 @@ class Salary(Base, BalanceMixin):
 class Permission(Base):
     __tablename__ = "permission"
 
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
-
+    add_customer: Mapped[bool] = mapped_column(default=False)
     access_to_system: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
     user: Mapped["User"] = relationship("User", back_populates="permissions")
 
 
@@ -282,4 +287,8 @@ class WorkingDay(Base):
     )  # Конец рабочего дня
 
     def __repr__(self):
-        return f"<WorkingDay(user_id={self.user_id}, day_of_week={self.day_of_week}, is_working_day={self.is_working_day})>"
+        return f"""
+        <WorkingDay(user_id={self.user_id},
+        day_of_week={self.day_of_week},
+        is_working_day={self.is_working_day})>
+    """

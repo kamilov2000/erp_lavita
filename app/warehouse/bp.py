@@ -25,7 +25,7 @@ from app.utils.schema import ResponseSchema
 
 
 warehouse = Blueprint(
-    "warehouse", __name__, url_prefix="/warehouse", description="Операции на Скаладах"
+    "warehouse", __name__, url_prefix="/warehouse", description="Операции на Складах"
 )
 
 

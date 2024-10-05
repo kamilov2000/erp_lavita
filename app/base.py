@@ -28,7 +28,7 @@ def get_db_session():
     try:
         yield db_session
         db_session.commit()
-    except Exception as e:
+    except Exception:
         db_session.rollback()
         raise
     finally:
@@ -170,7 +170,7 @@ def drop_everything(engine):
 
     con = engine.connect()
     trans = con.begin()
-    inspector = Inspector.from_engine(db.engine)
+    inspector = Inspector.from_engine(engine)
 
     # We need to re-create a minimal metadata with only the required things to
     # successfully emit drop constraints and tables commands for postgres (based

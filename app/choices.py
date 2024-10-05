@@ -91,3 +91,8 @@ class WorkScheduleStatus(Enum):
 class UserTransactionAction(Enum):
     BONUS = "bonus"
     PENALTY = "penalty"
+
+
+class ClientEntityType(Enum):
+    INDIVIDUAL = "individual"
+    LEGAL = "legal"

@@ -80,7 +80,10 @@ def accept_to_system_permission(f):
     @wraps(f)
     def decorated(c, *args, **kwargs):
         if not c.is_accepted_to_system:
-            return msg_response("You do not have permission to enter the system!"), 403
+            return (
+                msg_response("You do not have permission to enter the system!", 0),
+                403,
+            )
 
         return f(
             c, *args, **kwargs
