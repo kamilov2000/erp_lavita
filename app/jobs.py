@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from sqlalchemy import func, types
 
@@ -7,13 +8,14 @@ from app.choices import DaysOfWeekShort, WorkScheduleStatus
 from app.finance.models import Counterparty
 from app.user.models import User, WorkingDay, WorkSchedule
 from app.utils.func import sql_exception_handler
-from app.warehouse.models import Warehouse
+
+logger = logging.getLogger(__name__)
 
 
 @sql_exception_handler
 def scheduled_auto_charge_task():
     current_date = datetime.datetime.now().date()
-
+    logger.info("Starts scheduled_auto_charge_task!")
     counterparties = Counterparty.query.filter(
         Counterparty.auto_charge == True,
         # Проверяем, что текущая дата меньше или равна дате создания + месяцы начисления
@@ -28,7 +30,11 @@ def scheduled_auto_charge_task():
     ).all()
 
     for counterparty in counterparties:
-        transaction = counterparty.create_auto_charge_transaction()
+        transaction = counterparty.create_auto_charge_transaction(
+            month=counterparty.created_at.month,
+            year=counterparty.created_at.year,
+            n=counterparty.charge_period_months,
+        )
         session.add(transaction)
     session.commit()
 

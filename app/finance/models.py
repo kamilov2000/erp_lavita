@@ -1,5 +1,8 @@
 import calendar
+import random
+import string
 from datetime import datetime
+from secrets import token_hex
 from typing import List, Optional
 
 from sqlalchemy import (
@@ -327,12 +330,10 @@ class Counterparty(TempDataMixin, Base, BalanceMixin):
     def can_delete_and_edit(self) -> bool:
         return self.category == AccountCategories.USER
 
-    def create_auto_charge_transaction(self):
-        current_year = datetime.now().year
-        current_month = datetime.now().month
-        # получить количество дней в текущем месяце
-        days_in_month = calendar.monthrange(current_year, current_month)[1]
-        # Получаем объект балансового счета
+    def create_auto_charge_transaction(self, month, year, n):
+        days_in_months = self.__count_days_in_months(
+            start_month=month, start_year=year, n=n
+        )
         debit_object = BalanceAccount.query.filter_by(name="Постоянные расходы").first()
         transaction = Transaction(
             credit_content_type="Counterparty",
@@ -340,12 +341,33 @@ class Counterparty(TempDataMixin, Base, BalanceMixin):
             debit_content_type="BalanceAccount",
             debit_object_id=debit_object.id,
             status=TransactionStatuses.PUBLISHED,
-            amount=self.charge_amount / days_in_month,
+            amount=self.charge_amount / days_in_months,
             credit_name=self.name,
             debit_name=debit_object.name,
+            number_transaction="".join(random.choices(string.digits, k=6)),
         )
         transaction.publish()
         return transaction
+
+    def __count_days_in_months(self, start_year: int, start_month: int, n: int) -> int:
+        total_days = 0
+        current_year = start_year
+        current_month = start_month
+
+        for _ in range(n):
+            # Определяем количество дней в текущем месяце
+            days_in_month = calendar.monthrange(current_year, current_month)[1]
+            total_days += days_in_month
+
+            # Переход к следующему месяцу
+            current_month += 1
+            if (
+                current_month > 12
+            ):  # если месяц вышел за декабрь, переходим на следующий год
+                current_month = 1
+                current_year += 1
+
+        return total_days
 
     def __repr__(self):
         return (

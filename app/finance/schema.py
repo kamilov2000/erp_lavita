@@ -28,6 +28,13 @@ from app.finance.utils import CATEGORY_COLLECTION, CATEGORY_LIST, check_all_strs
 from app.utils.schema import DefaultDumpsSchema, PaginationSchema
 
 
+class RoundedFloat(ma.fields.Float):
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value is None:
+            return None
+        return round(value, 2)
+
+
 class ByNameSearchSchema(ma.Schema):
     name = ma.fields.String(required=False, description="Search by name")
     page = ma.fields.Int()
@@ -124,6 +131,7 @@ class CashRegisterCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 class CashRegisterListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     payment_types = ma.fields.Nested(PaymentTypeForRelationsSchema, many=True)
+    balance = RoundedFloat(dump_only=True)
 
     class Meta:
         model = CashRegister
@@ -137,6 +145,7 @@ class PagCashRegisterSchema(ma.Schema):
 
 class TransactionSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     status = ma.fields.Enum(enum=TransactionStatuses)
+    amount = RoundedFloat(dump_only=True)
 
     class Meta:
         model = Transaction
@@ -161,6 +170,7 @@ class CashRegisterRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     payment_types = ma.fields.Nested(PaymentTypeForRelationsSchema, many=True)
     incomes = ma.fields.Method("get_incomes")
     expenses = ma.fields.Method("get_expenses")
+    balance = RoundedFloat(dump_only=True)
 
     class Meta:
         model = CashRegister
@@ -228,6 +238,7 @@ class BalanceAccountCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class BalanceAccountListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     account_type = ma.fields.Enum(enum=AccountTypes)
     category = ma.fields.Enum(enum=AccountCategories)
+    balance = RoundedFloat(dump_only=True)
 
     class Meta:
         model = BalanceAccount
@@ -250,6 +261,7 @@ class PagBalanceAccountSchema(ma.Schema):
 class BalanceAccountRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     account_type = ma.fields.Enum(enum=AccountTypes)
     category = ma.fields.Enum(enum=AccountCategories)
+    balance = RoundedFloat(dump_only=True)
 
     class Meta:
         model = BalanceAccount
@@ -316,6 +328,7 @@ class TransactionListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     debit_category = ma.fields.Method("get_debit_category")
     status = ma.fields.Enum(enum=TransactionStatuses)
     created_at = ma.fields.DateTime(format="%d %b %Y, %H:%M")
+    amount = RoundedFloat(dump_only=True)
 
     class Meta:
         model = Transaction
@@ -363,6 +376,7 @@ class TransactionRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     histories = ma.fields.Method("get_sorted_histories")
     comments = ma.fields.Nested(TransactionCommentSchema, many=True)
     category = ma.fields.Enum(AccountCategories)
+    amount = RoundedFloat(dump_only=True)
 
     class Meta:
         model = Transaction
@@ -448,8 +462,9 @@ class CounterpartySchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 class CounterpartyListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     status = ma.fields.Enum(enum=Statuses)
     category = ma.fields.Enum(enum=AccountCategories)
-    auto_charge = ma.fields.Method("get_charge_amount")
+    charge_amount = ma.fields.Method("get_charge_amount")
     created_at = ma.fields.DateTime(format="%d %b %Y, %H:%M")
+    balance = RoundedFloat(dump_only=True)
 
     class Meta:
         model = Counterparty
@@ -466,7 +481,9 @@ class CounterpartyListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         ]
 
     def get_charge_amount(self, obj):
-        return obj.charge_amount / obj.charge_period_months
+        if obj.charge_amount and obj.charge_period_months:
+            return obj.charge_amount / obj.charge_period_months
+        return 0
 
 
 class PagCounterpartySchema(ma.Schema):
@@ -492,7 +509,7 @@ class CounterpartyRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     status = ma.fields.Enum(enum=Statuses)
     category = ma.fields.Enum(enum=AccountCategories, dump_only=True)
     files = ma.fields.Nested(AttachedFileSchema, many=True, dump_only=True)
-    balance = ma.fields.Float(dump_only=True)
+    balance = RoundedFloat(dump_only=True)
     can_delete_and_edit = ma.fields.Bool(dump_only=True)
     histories = ma.fields.Nested(CounterpartyHistorySchema, many=True)
 
@@ -578,6 +595,7 @@ class TaxRateListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     category = ma.fields.Enum(enum=TaxRateCategories)
     status = ma.fields.Enum(enum=Statuses)
     payment_types = ma.fields.Nested(PaymentTypeForRelationsSchema, many=True)
+    balance = RoundedFloat(dump_only=True)
 
     class Meta:
         model = TaxRate
