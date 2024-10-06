@@ -1,7 +1,7 @@
 from flask import jsonify, request
 from flask.views import MethodView
 from flask_smorest import Blueprint
-from sqlalchemy import func, or_
+from sqlalchemy import Date, and_, cast, func, or_
 
 from app.base import session
 from app.choices import AccountCategories, Statuses
@@ -314,8 +314,17 @@ class TransactionView(CustomMethodPaginationView):
         status = args.pop("status", None)
         category_name = args.pop("category_name", None)
         category_object_id = args.pop("category_object_id", None)
+        category = args.pop("category", None)
+        start_date = args.pop("start_date", None)
+        end_date = args.pop("end_date", None)
         custom_query = None
         lst = []
+
+        if category:
+            lst.append(self.model.category == category)
+
+        if start_date and end_date:
+            lst.append(cast(self.model.created_at, Date).between(start_date, end_date))
 
         # если в качестве категории будет Юзер то нужно его поменять на Salary
         # потому что в ней баланс юзера

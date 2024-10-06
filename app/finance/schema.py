@@ -59,6 +59,9 @@ class TransactionArgsSchema(ma.Schema):
         validate=validate.OneOf(CATEGORY_LIST, error="Invalid debit category")
     )
     category_object_id = ma.fields.Int()
+    category = ma.fields.Enum(AccountCategories)
+    start_date = ma.fields.Date()
+    end_date = ma.fields.Date()
 
 
 class CounterpartyArgsSchema(ma.Schema):
@@ -329,6 +332,7 @@ class TransactionListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     status = ma.fields.Enum(enum=TransactionStatuses)
     created_at = ma.fields.DateTime(format="%d %b %Y, %H:%M")
     amount = RoundedFloat(dump_only=True)
+    category = ma.fields.Enum(AccountCategories)
 
     class Meta:
         model = Transaction
@@ -343,6 +347,7 @@ class TransactionListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "created_at",
             "can_edit",
             "can_cancel",
+            "category",
         ]
 
 
