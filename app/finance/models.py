@@ -46,12 +46,12 @@ class PaymentType(Base):
         counter_party = Counterparty.query.filter(
             Counterparty.name == self.name
         ).first()
-        if self.has_commissioner == True and not counter_party:
+        if self.has_commissioner and not counter_party:
             counter_party = Counterparty(name=self.name, code="4030")
             session.add(counter_party)
 
     def update_counterparty(self, name):
-        if (name != None) and (name != self.name):
+        if (name is not None) and (name is not self.name):
             counter_party = Counterparty.query.filter(
                 Counterparty.name == self.name
             ).first()
@@ -164,8 +164,10 @@ class TransactionComment(Base):
 
 class Transaction(TempDataMixin, Base):
     """
-    Транзакция - документ, который содержит Кредит (откуда) и Дебет (куда), а также фиксирует Сумму транзакции. В качестве Дебета или
-    Кредита может выступать Касса, Счет баланса и Контрагент. Может Создаваться как Черновик,
+    Транзакция - документ, который содержит Кредит (откуда) и Дебет (куда),
+    а также фиксирует Сумму транзакции. В качестве Дебета или
+    Кредита может выступать Касса, Счет баланса и Контрагент.
+    Может Создаваться как Черновик,
     Публиковаться и Отменяться. Не может публиковаться задним числом.
     """
 
@@ -273,9 +275,12 @@ class CounterpartyHistory(Base, HistoryMixin):
 
 class Counterparty(TempDataMixin, Base, BalanceMixin):
     """
-    Контрагенты - аналог Кассы, только не содержит Типы оплаты и не участвует в мобильном приложении, может иметь любой Код.
-    Также может создаваться автоматически, например при создании Налоговой ставки или активации механики Комиссионер,
-    в таком случае имеет тип Системный. Могут иметь Автоматическое начисление (создание Авто транзакций).
+    Контрагенты - аналог Кассы, только не содержит Типы оплаты
+    и не участвует в мобильном приложении, может иметь любой Код.
+    Также может создаваться автоматически, например при создании
+    Налоговой ставки или активации механики Комиссионер,
+    в таком случае имеет тип Системный.
+    Могут иметь Автоматическое начисление (создание Авто транзакций).
     """
 
     __tablename__ = "counterparty"
@@ -391,7 +396,8 @@ class AttachedFile(Base):
         return f"<AttachedFile(filename={self.filename})>"
 
 
-# Ассоциативная таблица для отношения многие-ко-многим между налоговыми ставками и типами оплат
+# Ассоциативная таблица для отношения многие-ко-многим
+# между налоговыми ставками и типами оплат
 tax_rate_payment_type = Table(
     "tax_rate_payment_type",
     Base.metadata,
@@ -402,8 +408,10 @@ tax_rate_payment_type = Table(
 
 class TaxRate(Base):
     """
-    Налоговая ставка - содержит список Типов оплаты, для которых применяется и процентное значение (например 5%),
-    создает Авто транзакции при завершении заказа с использованием Типа оплаты, к которому есть Налоговая ставка.
+    Налоговая ставка - содержит список Типов оплаты,
+    для которых применяется и процентное значение (например 5%),
+    создает Авто транзакции при завершении заказа с использованием Типа оплаты,
+    к которому есть Налоговая ставка.
     Создает системного Контрагента с названием данной Налоговой ставки.
     """
 
@@ -449,7 +457,7 @@ class TaxRate(Base):
             session.add(counter_party)
 
     def update_counterparty(self, name):
-        if (name != None) and (name != self.name):
+        if (name is not None) and (name is not self.name):
             counter_party = Counterparty.query.filter(
                 Counterparty.name == self.name
             ).first()
