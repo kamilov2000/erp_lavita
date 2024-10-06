@@ -2,7 +2,6 @@ import calendar
 import random
 import string
 from datetime import datetime
-from secrets import token_hex
 from typing import List, Optional
 
 from sqlalchemy import (
