@@ -63,8 +63,8 @@ class LotBase:
 
 class Debt(Base):
     __tablename__ = "debt"
-    type: Mapped[enum.Enum] = mapped_column(Enum(DebtTypes))
-    type_id: Mapped[int]
+    type: Mapped[enum.Enum] = mapped_column(Enum(DebtTypes), index=True)
+    type_id: Mapped[int] = mapped_column(index=True)
     quantity: Mapped[int]
 
 
