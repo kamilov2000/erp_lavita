@@ -226,7 +226,7 @@ class GroupSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         model = Group
         load_instance = True
         sqla_session = session
-
+        include_fk = True
 
 class GroupListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     users = ma.fields.Nested(UserListForGroupSchema, many=True)

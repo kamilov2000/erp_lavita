@@ -348,18 +348,16 @@ class GroupIdView(MethodView):
         department_id = update_data.get("department_id")
         user_ids = update_data.pop("user_ids", None)
         users = User.query.filter(User.id.in_(user_ids)).all()
-        update_data["users"] = users
         # assign users to department
         for user in users:
             setattr(user, "department_id", department_id)
-        update_data["users"] = users
 
         item = Group.get_or_404(id)
-
+        item.users = users
         schema = GroupSchema()
         schema.load(update_data, instance=item, partial=True)
         session.commit()
-        return schema.dump(item)
+        return item
 
     @token_required
     @accept_to_system_permission
