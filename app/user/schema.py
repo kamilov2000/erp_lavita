@@ -12,6 +12,7 @@ from app.choices import (
 )
 from app.user.models import (
     Department,
+    DepartmentHistory,
     Document,
     Group,
     Partner,
@@ -197,6 +198,10 @@ class DepartmentCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         fields = ["id", "name"]
 
 
+class AddUserToGroup(ma.Schema):
+    user_id = ma.fields.Int(required=True)
+
+
 class DepartmentUpdateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     name = ma.fields.Str()
 
@@ -228,6 +233,7 @@ class GroupSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
         sqla_session = session
         include_fk = True
 
+
 class GroupListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     users = ma.fields.Nested(UserListForGroupSchema, many=True)
     payment_group = ma.fields.Method("get_payment_group")
@@ -239,7 +245,7 @@ class GroupListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     def get_payment_group(self, obj):
         if not obj.users:
             return 0
-        return sum([user.salary.current_balance for user in obj.users])
+        return sum([user.salary.balance for user in obj.users])
 
 
 class PagGroupSchema(ma.Schema):
@@ -259,16 +265,40 @@ class GroupUpdateSchema(ma.Schema):
     department_id = ma.fields.Int(required=True)
 
 
+class DepartmentHistoryListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
+    operation_status = ma.fields.Enum(enum=CrudOperations)
+
+    class Meta:
+        model = DepartmentHistory
+
+
 class DepartmentRetrieveSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     groups = ma.fields.Nested(GroupListSchema, many=True)
     overall_payments = ma.fields.Method("get_payments")
+    groups_count = ma.fields.Method("get_groups_count")
+    employees_in_department = ma.fields.Method("get_employees_in_department")
+    histories = ma.fields.Nested(DepartmentHistoryListSchema, many=True)
 
     class Meta:
         model = Department
-        fields = ["id", "name", "groups", "overall_payments"]
+        fields = [
+            "id",
+            "name",
+            "groups",
+            "overall_payments",
+            "groups_count",
+            "employees_in_department",
+            "histories",
+        ]
 
     def get_payments(self, obj):
-        return sum([user.salary.current_balance for user in obj.users])
+        return sum([user.salary.balance for user in obj.users])
+
+    def get_groups_count(self, obj):
+        return len(obj.groups)
+
+    def get_employees_in_department(self, obj):
+        return len(obj.users)
 
 
 class PagDepartmentSchema(ma.Schema):

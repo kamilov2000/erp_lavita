@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 import jwt
 from flask import current_app, jsonify, request
@@ -24,6 +25,7 @@ from app.user.models import (
     WorkSchedule,
 )
 from app.user.schema import (
+    AddUserToGroup,
     CreateTransactionSchema,
     DepartmentArgsSchema,
     DepartmentCreateSchema,
@@ -45,6 +47,7 @@ from app.user.schema import (
     PagWorkScheduleSchema,
     UserCreateSchema,
     UserIdSchema,
+    UserListForGroupSchema,
     UserQueryArgSchema,
     UserSalaryQueryArgSchema,
     UserSalaryRetrieveSchema,
@@ -66,6 +69,14 @@ from app.utils.schema import ResponseSchema
 user = Blueprint(
     "user", __name__, url_prefix="/user", description="operations on users"
 )
+
+
+@user.get("/get_current_user")
+@token_required
+@accept_to_system_permission
+def get_current_user(c):
+    schema = UserListForGroupSchema()
+    return schema.dump(c)
 
 
 @user.post("/login")
@@ -296,6 +307,19 @@ class DepartmentIdView(MethodView):
     def delete(c, self, id):
         """Delete department"""
         Department.delete_with_get(id)
+
+
+@user.post("/add_user_to_group/<int:group_id>")
+@user.arguments(AddUserToGroup)
+@token_required
+@accept_to_system_permission
+@sql_exception_handler
+def add_user_to_group(c, user_data, group_id):
+    group = Group.get_by_id(group_id)
+    user_ = User.get_by_id(user_data.get("user_id", None))
+    group.users.append(user_)
+    session.commit()
+    return jsonify({"message": "success!"}), 200
 
 
 @user.route("/group")
@@ -586,7 +610,6 @@ class WorkScheduleSalaryByIdView(MethodView):
     @token_required
     @accept_to_system_permission
     def get(c, self, id):
-
         user = User.get_or_404(id)
         return user
 
