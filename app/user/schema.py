@@ -123,6 +123,7 @@ class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 class UserListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
     status = ma.fields.Enum(enum=Statuses)
+    department_name = ma.fields.Method("get_department_name")
 
     class Meta:
         model = User
@@ -132,7 +133,11 @@ class UserListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "role",
             "status",
             "is_accepted_to_system",
+            "department_name",
         ]
+
+    def get_department_name(self, obj):
+        return obj.department.name if obj.department else None
 
 
 class UserUpdateSchema(SQLAlchemySchema):
