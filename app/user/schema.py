@@ -230,7 +230,13 @@ class UserListForGroupSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = User
-        fields = ["id", "full_name", "role", "status"]
+        fields = [
+            "id",
+            "full_name",
+            "role",
+            "status",
+            "is_accepted_to_system",
+        ]
 
 
 class GroupSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
