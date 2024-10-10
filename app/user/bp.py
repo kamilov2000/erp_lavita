@@ -1,5 +1,4 @@
 import datetime
-from typing import Any
 
 import jwt
 from flask import current_app, jsonify, request
@@ -228,17 +227,34 @@ class UserView(CustomMethodPaginationView):
 
     @token_required
     @accept_to_system_permission
-    @sql_exception_handler
-    @user.arguments(UserCreateSchema)
+    # @sql_exception_handler
+    @user.arguments(UserCreateSchema, location="form")
     @user.response(400, ResponseSchema)
     @user.response(201, UserCreateSchema)
     def post(c, self, new_data):
-        """Add a new user"""
+        """
+        Add a new user
+
+        ВАЖНО: Swagger UI некорректно обрабатывает загрузку файлов
+        через 'multipart/form-data'.
+        Для отправки файла используйте Postman или другой инструмент,
+        поддерживающий отправку файлов через форму.
+        Обязательно передавайте файл в поле 'photo', и укажите остальные параметры
+        """
+
+        photo = request.files.get("photo")
+
         user = User(**new_data)
         schema = UserCreateSchema()
         user.add_temp_data("history_data", schema.dump(user))
         session.add(user)
         session.flush()
+        if photo:
+            path = hash_image_save(
+                uploaded_file=photo, model_name="user", ident=user.id
+            )
+            setattr(user, "photo", path)
+
         user.create_salary_abd_permission_obj()
         session.commit()
         return user

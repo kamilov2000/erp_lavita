@@ -131,6 +131,8 @@ def register_events():  # noqa: C901
                 # Используем сессию вне слушателя для добавления данных после коммита
                 with Session() as new_session:
                     for item in g.history_to_commit:
+                        if item["data"]["data"] is None:
+                            break
                         model = item["model"]
                         data = item["data"]
                         instance = model(**data)
@@ -141,6 +143,7 @@ def register_events():  # noqa: C901
                 new_session.rollback()  # Откатываем транзакцию, если произошла ошибка
             finally:
                 new_session.close()
+
     reg_invoice_events()
 
 

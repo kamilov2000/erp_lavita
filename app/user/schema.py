@@ -103,6 +103,7 @@ class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "is_driver_salary_format",
             "photo",
             "histories",
+            "department_id",
         ]
 
     role = auto_field(dump_only=True)
