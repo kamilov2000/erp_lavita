@@ -57,6 +57,7 @@ class User(TempDataMixin, Base):
     last_name: Mapped[Optional[str]]
     role: Mapped[str] = mapped_column(String(50), default="staff")
     password: Mapped[str] = mapped_column(String(200), nullable=True)
+    identifier: Mapped[str] = mapped_column(String(200), nullable=True, unique=True)
 
     status: Mapped[Statuses] = mapped_column(Enum(Statuses), nullable=True)
     warehouses: Mapped[List["Warehouse"]] = relationship(

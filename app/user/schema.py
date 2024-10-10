@@ -92,6 +92,7 @@ class UserSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
             "id",
             "last_name",
             "first_name",
+            "identifier",
             "role",
             "phone_number",
             "department_name",
@@ -392,7 +393,12 @@ class UsersWorkScheduleList(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = User
-        fields = ["id", "full_name", "work_schedules"]
+        fields = [
+            "id",
+            "full_name",
+            "work_schedules",
+            "identifier",
+        ]
 
 
 class PagWorkScheduleSchema(ma.Schema):
