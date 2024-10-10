@@ -479,11 +479,12 @@ def create_document(c, new_data):
     if not file:
         return jsonify({"message": "file field is required!"}), 400
     user_id = new_data.get("user_id")
-    path = hash_image_save(uploaded_file=file, model_name="user", ident=user_id)
+    path = hash_image_save(uploaded_file=file, model_name="document", ident=user_id)
     item = Document(**new_data, filepath=path)
 
     session.add(item)
     session.commit()
+
     return item
 
 

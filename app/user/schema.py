@@ -342,7 +342,7 @@ class DocumentCreateSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
     class Meta:
         model = Document
-        fields = ["filename", "description", "user_id"]
+        fields = ["filename", "description", "user_id", "id"]
 
 
 class CreateTransactionSchema(ma.Schema):
@@ -361,8 +361,7 @@ class DocumentUpdateListSchema(SQLAlchemyAutoSchema, DefaultDumpsSchema):
 
 
 class UserIdSchema(ma.Schema):
-    counterparty_id = ma.fields.Int(
-        data_key="user_id",
+    user_id = ma.fields.Int(
         required=True,
         description="for attaching to User",
     )
